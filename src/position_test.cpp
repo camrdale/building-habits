@@ -89,5 +89,15 @@ TEST(PositionTest, CalculateLegalMovesKnight) {
   EXPECT_THAT(json["e4"], testing::UnorderedElementsAre("d2", "c3", "f2", "g3"));
 }
 
+TEST(PositionTest, CalculateLegalMovesRook) {
+  Position p = Position::FromFen("4Q2R/8/p3RP1p/8/p7/8/8/R3R3 w - - 0 1");
+  nlohmann::json json = calculateLegalMoves(p);
+
+  EXPECT_THAT(json["a1"], testing::UnorderedElementsAre("a2", "a3", "a4", "b1", "c1", "d1"));
+  EXPECT_THAT(json["e1"], testing::UnorderedElementsAre("e2", "e3", "e4", "e5", "f1", "g1", "h1", "b1", "c1", "d1"));
+  EXPECT_THAT(json["e6"], testing::UnorderedElementsAre("e7", "e2", "e3", "e4", "e5", "a6", "b6", "c6", "d6"));
+  EXPECT_THAT(json["h8"], testing::UnorderedElementsAre("h6", "h7", "g8", "f8"));
+}
+
 } // namespace
 } // namespace habits

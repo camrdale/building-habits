@@ -304,7 +304,7 @@ nlohmann::json calculateLegalMoves(const Position& p) {
             break;
           }
           case WKNIGHT:
-          case BKNIGHT: {
+          case BKNIGHT:
             // Set all the default moves for knights on C3.
             move_board = KNIGHT_MOVES_C3;
             // Shift to the actual position.
@@ -334,7 +334,68 @@ nlohmann::json calculateLegalMoves(const Position& p) {
             // Remove friendly pieces.
             move_board &= ~active_pieces;
             break;
-          }
+          case WROOK:
+          case BROOK:
+            if (rank < 8) {
+              uint64_t up_move = A_FILE << (square + 8);
+              uint64_t nogo_board =
+                  up_move & (active_pieces | (opponent_pieces << 8));
+              if (nogo_board == 0ull) {
+                // No blockers found in this direction so all are valid.
+                move_board |= up_move;
+              } else {
+                // Uses __builtin_ctzll which may not work on all compilers.
+                int first_nogo_square = __builtin_ctzll(nogo_board);
+                uint64_t up_move_mask = A_FILE << first_nogo_square;
+                move_board |= up_move & ~up_move_mask;
+              }
+            }
+
+            if (file < 8) {
+              uint64_t right_move =
+                  (RANK_1 << (square + 1)) & (RANK_1 << ((rank - 1) * 8));
+              uint64_t nogo_board =
+                  right_move & (active_pieces | (opponent_pieces << 1));
+              if (nogo_board == 0ull) {
+                // No blockers found in this direction so all are valid.
+                move_board |= right_move;
+              } else {
+                int first_nogo_square = __builtin_ctzll(nogo_board);
+                uint64_t right_move_mask = RANK_1 << first_nogo_square;
+                move_board |= right_move & ~right_move_mask;
+              }
+            }
+
+            if (rank > 1) {
+              uint64_t down_move = A_FILE >> (64 - square);
+              uint64_t nogo_board =
+                  down_move & (active_pieces | (opponent_pieces >> 8));
+              if (nogo_board == 0ull) {
+                // No blockers found in this direction so all are valid.
+                move_board |= down_move;
+              } else {
+                int last_nogo_square = 63 - __builtin_clzll(nogo_board);
+                uint64_t down_move_mask = A_FILE >> (56 - last_nogo_square);
+                move_board |= down_move & ~down_move_mask;
+              }
+            }
+
+            if (file > 1) {
+              uint64_t left_move = ((RANK_1 << 56) >> (64 - square)) &
+                                   (RANK_1 << ((rank - 1) * 8));
+              uint64_t nogo_board =
+                  left_move & (active_pieces | (opponent_pieces >> 1));
+              if (nogo_board == 0ull) {
+                // No blockers found in this direction so all are valid.
+                move_board |= left_move;
+              } else {
+                int last_nogo_square = 63 - __builtin_clzll(nogo_board);
+                uint64_t left_move_mask =
+                    (RANK_1 << 56) >> (63 - last_nogo_square);
+                move_board |= left_move & ~left_move_mask;
+              }
+            }
+            break;
         }
         if (move_board != 0ull) {
           nlohmann::json targets = nlohmann::json::array();
