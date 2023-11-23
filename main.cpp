@@ -1,4 +1,5 @@
 #include <curl/curl.h>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -11,6 +12,7 @@
 #include "expresscpp/console.hpp"
 #include "expresscpp/expresscpp.hpp"
 #include "expresscpp/middleware/serve_static_provider.hpp"
+#include "habits/moves.hpp"
 #include "habits/position.hpp"
 
 std::string url_decode(std::string encoded) {
