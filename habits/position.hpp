@@ -34,20 +34,16 @@ enum ColoredPiece : int {
   BKING = 11,
 };
 
-constexpr std::string_view FEN_PIECES = "PNBRQKpnbrqk";
-
-constexpr uint64_t A_FILE = 0x101010101010101ull;
-constexpr uint64_t RANK_1 = 0xffull;
-constexpr uint64_t AB_FILES = A_FILE | (A_FILE << 1);
-constexpr uint64_t GH_FILES = (A_FILE << 7) | (A_FILE << 6);
-constexpr uint64_t RANK_12 = RANK_1 | (RANK_1 << 8);
-constexpr uint64_t RANK_78 = (RANK_1 << 56) | (RANK_1 << 48);
-
-constexpr uint64_t KNIGHT_MOVES_C3 = 0xa1100110aull;
-
 enum Castle : int {
   OO = 1,
   OOO = 2,
+};
+
+enum ColoredCastle : int {
+  WOO = 0,
+  WOOO = 1,
+  BOO = 2,
+  BOOO = 3,
 };
 
 std::string algebraic(int square);

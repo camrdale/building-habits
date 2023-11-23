@@ -56,5 +56,42 @@ TEST(MovesTest, CalculateLegalMovesRook) {
               testing::UnorderedElementsAre("h6", "h7", "g8", "f8"));
 }
 
+TEST(MovesTest, CalculateLegalMovesWhiteKing) {
+  Position p = Position::FromFen(
+      "1n1K3K/2p1PPP1/4PKP1/4PPP1/pn6/Kn6/nn6/R3K2R w - - 0 1");
+  nlohmann::json json = calculateLegalMoves(p);
+
+  EXPECT_THAT(json["a3"],
+              testing::UnorderedElementsAre("a2", "a4", "b2", "b3", "b4"));
+  EXPECT_THAT(json["e1"],
+              testing::UnorderedElementsAre("d1", "d2", "e2", "f2", "f1"));
+  EXPECT_THAT(json["f6"], testing::IsEmpty());
+  EXPECT_THAT(json["d8"],
+              testing::UnorderedElementsAre("c8", "c7", "d7", "e8"));
+  EXPECT_THAT(json["h8"], testing::UnorderedElementsAre("h7", "g8"));
+
+  // Check castling positions.
+  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
+                  "8/8/8/8/8/8/1Q1N1NP1/R3K2R w KQ - 0 1"))["e1"],
+              testing::UnorderedElementsAre("e2", "d1", "f1", "c1", "g1"));
+  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
+                  "8/8/8/8/8/8/1Q1N1NP1/RN2K1NR w KQ - 0 1"))["e1"],
+              testing::UnorderedElementsAre("e2", "d1", "f1"));
+}
+
+TEST(MovesTest, CalculateLegalMovesBlackKing) {
+  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
+                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b - - 0 1"))["e8"],
+              testing::UnorderedElementsAre("e7", "d8", "f8"));
+
+  // Check castling positions.
+  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
+                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b kq - 0 1"))["e8"],
+              testing::UnorderedElementsAre("e7", "d8", "f8", "c8", "g8"));
+  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
+                  "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1"))["e8"],
+              testing::UnorderedElementsAre("e7", "f8"));
+}
+
 }  // namespace
 }  // namespace habits

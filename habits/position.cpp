@@ -7,6 +7,12 @@
 
 namespace habits {
 
+namespace {
+
+constexpr std::string_view FEN_PIECES = "PNBRQKpnbrqk";
+
+} // namespace
+
 std::string algebraic(int square) {
   std::string an;
   an += static_cast<char>('a' + square % 8);
@@ -65,16 +71,16 @@ Position Position::FromFen(std::string_view fen) {
 
     switch (c) {
       case 'K':
-        p.castling[0] = true;
+        p.castling[WOO] = true;
         break;
       case 'Q':
-        p.castling[1] = true;
+        p.castling[WOOO] = true;
         break;
       case 'k':
-        p.castling[2] = true;
+        p.castling[BOO] = true;
         break;
       case 'q':
-        p.castling[3] = true;
+        p.castling[BOOO] = true;
         break;
     }
   }
