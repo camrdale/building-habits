@@ -21,13 +21,11 @@ find_package(CURL REQUIRED)
 
 add_subdirectory(habits)
 
-target_link_libraries(BuildingHabits PRIVATE position nlohmann_json::nlohmann_json expresscpp::expresscpp curl ws2_32 wsock32 fmt)
+target_link_libraries(BuildingHabits PRIVATE habits nlohmann_json::nlohmann_json expresscpp::expresscpp curl ws2_32 wsock32 fmt)
 
-# add the binary tree to the search path for include files
-# so that we will find TutorialConfig.h
 target_include_directories(BuildingHabits PUBLIC
                           "${PROJECT_BINARY_DIR}"
-                          "${PROJECT_SOURCE_DIR}/src"
+                          "${PROJECT_SOURCE_DIR}/habits"
                           )
 
 add_subdirectory(js)

@@ -1,13 +1,12 @@
 #include <curl/curl.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
-#include <vector>
 
 #include "expresscpp/console.hpp"
 #include "expresscpp/expresscpp.hpp"
