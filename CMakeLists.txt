@@ -19,7 +19,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(expresscpp REQUIRED)
 find_package(CURL REQUIRED)
 
-add_subdirectory(src)
+add_subdirectory(habits)
 
 target_link_libraries(BuildingHabits PRIVATE position nlohmann_json::nlohmann_json expresscpp::expresscpp curl ws2_32 wsock32 fmt)
 

@@ -11,7 +11,7 @@
 #include "expresscpp/console.hpp"
 #include "expresscpp/expresscpp.hpp"
 #include "expresscpp/middleware/serve_static_provider.hpp"
-#include "src/position.hpp"
+#include "habits/position.hpp"
 
 std::string url_decode(std::string encoded) {
   std::replace(encoded.begin(), encoded.end(), '+', ' ');
