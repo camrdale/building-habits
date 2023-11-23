@@ -1,4 +1,4 @@
-import { ChessBoardElement, objToFen, validSquare } from 'chessboard-element';
+import { ChessBoardElement, validSquare } from 'chessboard-element';
 
 const board = document.querySelector<ChessBoardElement>('chess-board');
 if (!board) {
@@ -13,6 +13,7 @@ interface Moves {
   [key: string]: string[];
 }
 
+let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 let turn = 'w';
 let pgn = '';
 let game_over = false;
@@ -32,9 +33,9 @@ function removeGreySquares() {
 
 function greySquare(square: string) {
   const highlightColor = (square.charCodeAt(0) % 2) ^ (square.charCodeAt(1) % 2)
-      ? whiteSquareGrey
-      : blackSquareGrey;
-  
+    ? whiteSquareGrey
+    : blackSquareGrey;
+
   highlightStyles.textContent += `
     chess-board::part(${square}) {
       background-color: ${highlightColor};
@@ -63,7 +64,7 @@ board.addEventListener('drag-start', (e: Event) => {
   }
 });
 
-board.addEventListener('drop', (e: Event) => {
+board.addEventListener('drop', async (e: Event) => {
   if (!isCustomEvent(e))
     throw new Error('not a custom event');
 
@@ -82,6 +83,23 @@ board.addEventListener('drop', (e: Event) => {
     return;
   }
 
+  const params = new URLSearchParams({ fen: fen });
+  try {
+    const response = await fetch('http://localhost:8080/engine/move/' + source + target + 'q?' + params.toString());
+    if (response.status !== 200) {
+      console.log(response);
+      setAction('snapback');
+      return;
+    }
+    const json = await response.json();
+    legal_moves = json["legal"];
+    fen = json["fen"];
+  } catch (e) {
+    console.log(e);
+    setAction('snapback');
+    return;
+  }
+
   if (pgn != '') {
     pgn += ' ';
   }
@@ -92,13 +110,15 @@ board.addEventListener('drop', (e: Event) => {
   } else {
     turn = 'w';
   }
+
+  updateStatus(fen);
 });
 
 board.addEventListener('mouseover-square', (e) => {
   if (!isCustomEvent(e))
     throw new Error('not a custom event');
 
-  const {square} = e.detail;
+  const { square } = e.detail;
 
   // get list of possible moves for this square
   const moves = legal_moves[square];
@@ -117,19 +137,19 @@ board.addEventListener('mouseover-square', (e) => {
   }
 });
 
-board.addEventListener('mouseout-square', (_e : Event) => {
+board.addEventListener('mouseout-square', (_e: Event) => {
   removeGreySquares();
 });
 
-board.addEventListener('change', (e: Event) => {
-  if (!isCustomEvent(e))
-    throw new Error('not a custom event');
+// board.addEventListener('change', (e: Event) => {
+//   if (!isCustomEvent(e))
+//     throw new Error('not a custom event');
 
-  const { value } = e.detail;
+//   const { value } = e.detail;
 
-  legalMoves(objToFen(value) || "");
-  updateStatus(objToFen(value) || "");
-});
+//   legalMoves(objToFen(value) || "");
+//   updateStatus(objToFen(value) || "");
+// });
 
 function legalMoves(fen: string) {
   fen += " " + turn + " KQkq - 0 1";
@@ -155,7 +175,7 @@ board.addEventListener('snap-end', (e: Event) => {
   if (!isCustomEvent(e))
     throw new Error('not a custom event');
 
-  // board.setPosition(game.fen());
+  board.setPosition(fen);
 });
 
 function updateStatus(fen: string) {
@@ -187,5 +207,5 @@ function updateStatus(fen: string) {
   document.querySelector('#pgn')!.innerHTML = pgn;
 }
 
-legalMoves(board.fen() || "");
-updateStatus(board.fen() || "");
+legalMoves(fen);
+updateStatus(fen);

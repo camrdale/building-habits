@@ -133,5 +133,84 @@ TEST(MovesTest, CalculateLegalMovesQueen) {
                                             "h3", "h2", "h1"));
 }
 
+TEST(MovesTest, MoveBasic) {
+  Position p = Position::FromFen(
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  ASSERT_EQ(move(&p, "e2e4"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+  ASSERT_EQ(move(&p, "c7c6"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+  ASSERT_EQ(move(&p, "g1f3"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/pp1ppppp/2p5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+  ASSERT_EQ(move(&p, "d8a5"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnb1kbnr/pp1ppppp/2p5/q7/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+}
+
+TEST(MovesTest, MoveCapturing) {
+  Position p = Position::FromFen(
+      "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
+  ASSERT_EQ(move(&p, "e4d5"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2");
+  ASSERT_EQ(move(&p, "d8d5"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3");
+}
+
+TEST(MovesTest, MoveCastling) {
+  Position p = Position::FromFen(
+      "r3k2r/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/R3K2R w KQkq - 6 8");
+  ASSERT_EQ(move(&p, "e1g1"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "r3k2r/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/R4RK1 b kq - 7 8");
+  ASSERT_EQ(move(&p, "e8c8"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "2kr3r/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/R4RK1 w - - 8 9");
+
+  p = Position::FromFen(
+      "r3k2r/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/R3K2R w KQkq - 6 8");
+  ASSERT_EQ(move(&p, "a1b1"), 0);
+  EXPECT_EQ(
+      p.ToFen(),
+      "r3k2r/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/1R2K2R b Kkq - 7 8");
+  ASSERT_EQ(move(&p, "h8f8"), 0);
+  EXPECT_EQ(
+      p.ToFen(),
+      "r3kr2/pbppqppp/np3n2/2b1p3/2B1P3/NP3N2/PBPPQPPP/1R2K2R w Kq - 8 9");
+}
+
+TEST(MovesTest, MoveEnPassant) {
+  Position p = Position::FromFen(
+      "rnbqkbnr/ppppppp1/7p/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2");
+  ASSERT_EQ(move(&p, "f7f5"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/ppppp1p1/7p/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
+  ASSERT_EQ(move(&p, "e5f6"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/ppppp1p1/5P1p/8/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 3");
+
+  p = Position::FromFen(
+      "rnbqkbnr/pp1pp1p1/5P1p/5p2/2p5/7P/PPPP1PP1/RNBQKBNR w KQkq - 0 5");
+  ASSERT_EQ(move(&p, "b2b4"), 0);
+  EXPECT_EQ(
+      p.ToFen(),
+      "rnbqkbnr/pp1pp1p1/5P1p/5p2/1Pp5/7P/P1PP1PP1/RNBQKBNR b KQkq b3 0 5");
+  ASSERT_EQ(move(&p, "c4b3"), 0);
+  EXPECT_EQ(p.ToFen(),
+            "rnbqkbnr/pp1pp1p1/5P1p/5p2/8/1p5P/P1PP1PP1/RNBQKBNR w KQkq - 0 6");
+}
+
+TEST(MovesTest, MovePromotion) {
+  Position p = Position::FromFen("3k1n2/6P1/8/8/8/8/p7/1R4K1 w - - 0 30");
+  ASSERT_EQ(move(&p, "g7g8q"), 0);
+  EXPECT_EQ(p.ToFen(), "3k1nQ1/8/8/8/8/8/p7/1R4K1 b - - 0 30");
+  ASSERT_EQ(move(&p, "a2a1n"), 0);
+  EXPECT_EQ(p.ToFen(), "3k1nQ1/8/8/8/8/8/8/nR4K1 w - - 0 31");
+}
+
 }  // namespace
 }  // namespace habits

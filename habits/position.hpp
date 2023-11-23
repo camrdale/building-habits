@@ -2,16 +2,17 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace habits {
 
 enum Piece : int {
-  PAWN = 1,
-  KNIGHT = 2,
-  BISHOP = 3,
-  ROOK = 4,
-  QUEEN = 5,
-  KING = 6,
+  PAWN = 0,
+  KNIGHT = 1,
+  BISHOP = 2,
+  ROOK = 3,
+  QUEEN = 4,
+  KING = 5,
 };
 
 enum Color : int {
@@ -47,6 +48,8 @@ enum ColoredCastle : int {
 };
 
 std::string algebraic(int square);
+int parseAlgebraic(std::string_view algebraic);
+Piece parsePromotion(char promotion);
 
 struct Position {
   uint64_t bitboards[12] = {0};

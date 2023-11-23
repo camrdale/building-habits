@@ -1,9 +1,11 @@
 #include "position.hpp"
 
 #include <bitset>
+#include <cctype>
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 namespace habits {
 
@@ -19,6 +21,20 @@ std::string algebraic(int square) {
   an += static_cast<char>('1' + square / 8);
   return an;
 }
+
+int parseAlgebraic(std::string_view algebraic) {
+  return (algebraic[1] - '1') * 8 + (algebraic[0] - 'a');
+}
+
+Piece parsePromotion(char promotion) {
+  int piece = FEN_PIECES.find(std::toupper(promotion));
+  if (piece == std::string_view::npos) {
+    // Promote to queen by default.
+    return QUEEN;
+  }
+  return static_cast<Piece>(piece);
+}
+
 Position Position::FromFen(std::string_view fen) {
   Position p;
   auto it = fen.begin();

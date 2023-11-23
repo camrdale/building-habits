@@ -18,6 +18,22 @@ TEST(PositionTest, AlgebraicNotation) {
   EXPECT_EQ(algebraic(63), "h8");
 }
 
+TEST(PositionTest, ParseAlgebraicNotation) {
+  EXPECT_EQ(parseAlgebraic("a1"), 0);
+  EXPECT_EQ(parseAlgebraic("b1"), 1);
+  EXPECT_EQ(parseAlgebraic("a2"), 8);
+  EXPECT_EQ(parseAlgebraic("h7"), 55);
+  EXPECT_EQ(parseAlgebraic("a8"), 56);
+  EXPECT_EQ(parseAlgebraic("h8"), 63);
+}
+
+TEST(PositionTest, ParsePromotion) {
+  EXPECT_EQ(parsePromotion('q'), QUEEN);
+  EXPECT_EQ(parsePromotion('n'), KNIGHT);
+  EXPECT_EQ(parsePromotion('N'), KNIGHT);
+  EXPECT_EQ(parsePromotion('?'), QUEEN);
+}
+
 TEST(PositionTest, FromFenStartPos) {
   Position p = Position::FromFen(
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");

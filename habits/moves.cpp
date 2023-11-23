@@ -1,10 +1,12 @@
 #include "moves.hpp"
 
 #include <bitset>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <string_view>
 
 #include "position.hpp"
 
@@ -177,7 +179,7 @@ nlohmann::json calculateLegalMoves(const Position& p) {
         if (piece == WROOK || piece == BROOK || piece == WQUEEN ||
             piece == BQUEEN) {
           if (rank < 8) {
-            uint64_t up_move = A_FILE << (square + 8);       
+            uint64_t up_move = A_FILE << (square + 8);
             uint64_t nogo_board =
                 up_move & (active_pieces | (opponent_pieces << 8));
             if (nogo_board == 0ull) {
@@ -265,7 +267,7 @@ nlohmann::json calculateLegalMoves(const Position& p) {
             // Remove diagonal that gets shifted to the other side.
             int move_mask_square = 8 * (rank - file) - 9;
             if (move_mask_square >= 0) {
-              down_left_move &= ~(DIAGONAL_UP >> (63-move_mask_square));
+              down_left_move &= ~(DIAGONAL_UP >> (63 - move_mask_square));
             }
             uint64_t nogo_board =
                 down_left_move & (active_pieces | (opponent_pieces >> 9));
@@ -274,7 +276,8 @@ nlohmann::json calculateLegalMoves(const Position& p) {
               move_board |= down_left_move;
             } else {
               int last_nogo_square = 63 - __builtin_clzll(nogo_board);
-              uint64_t down_left_move_mask = DIAGONAL_UP >> (63 - last_nogo_square);
+              uint64_t down_left_move_mask =
+                  DIAGONAL_UP >> (63 - last_nogo_square);
               move_board |= down_left_move & ~down_left_move_mask;
             }
           }
@@ -294,7 +297,8 @@ nlohmann::json calculateLegalMoves(const Position& p) {
               move_board |= up_left_move;
             } else {
               int first_nogo_square = __builtin_ctzll(nogo_board);
-              uint64_t up_left_move_mask = DIAGONAL_DOWN << (first_nogo_square - 7);
+              uint64_t up_left_move_mask = DIAGONAL_DOWN
+                                           << (first_nogo_square - 7);
               move_board |= up_left_move & ~up_left_move_mask;
             }
           }
@@ -314,7 +318,8 @@ nlohmann::json calculateLegalMoves(const Position& p) {
               move_board |= down_right_move;
             } else {
               int last_nogo_square = 63 - __builtin_clzll(nogo_board);
-              uint64_t down_right_move_mask = DIAGONAL_DOWN >> (63 - last_nogo_square - 7);
+              uint64_t down_right_move_mask =
+                  DIAGONAL_DOWN >> (63 - last_nogo_square - 7);
               move_board |= down_right_move & ~down_right_move_mask;
             }
           }
@@ -339,6 +344,129 @@ nlohmann::json calculateLegalMoves(const Position& p) {
     }
   }
   return legal;
+}
+
+int move(Position* p, std::string_view move) {
+  int from_square = parseAlgebraic(move.substr(0, 2));
+  int to_square = parseAlgebraic(move.substr(2, 2));
+  uint64_t from_mask = 1ull << from_square;
+  uint64_t to_mask = 1ull << to_square;
+
+  // Find which peice moved.
+  int starting_piece = p->active_color == WHITE ? 0 : 6;
+  int piece = starting_piece;
+  for (; piece < starting_piece + 6; piece++) {
+    if ((from_mask & p->bitboards[piece]) != 0ull) {
+      break;
+    }
+  }
+  if (piece >= starting_piece + 6) {
+    std::cout << "Failed to find a piece for " << p->active_color
+              << " on square " << from_square << " (" << move << ")"
+              << std::endl;
+    return 1;
+  }
+  p->halfmove_clock++;
+
+  // Find if an opponent peice is on the target square.
+  starting_piece = p->active_color == WHITE ? 6 : 0;
+  int opponent_piece = starting_piece;
+  for (; opponent_piece < starting_piece + 6; opponent_piece++) {
+    if ((to_mask & p->bitboards[opponent_piece]) != 0ull) {
+      break;
+    }
+  }
+  if (opponent_piece < starting_piece + 6) {
+    // Remove the opponent's piece from the target square.
+    p->bitboards[opponent_piece] &= ~to_mask;
+    p->halfmove_clock = 0;
+  }
+
+  // Check for en passant capture.
+  if (piece % 6 == PAWN && p->en_passant_target_square == to_square) {
+    int en_passant_square = to_square - (p->active_color == WHITE ? 8 : -8);
+    p->bitboards[6 - piece] &= ~(1ull << en_passant_square);
+    p->halfmove_clock = 0;
+  }
+  p->en_passant_target_square = -1;
+
+  // Remove the from square from the piece's board.
+  p->bitboards[piece] &= ~from_mask;
+
+  if (piece % 6 == PAWN && (to_square >= 56 || to_square <= 7)) {
+    // Promote to queen by default
+    int promotion_piece = piece + QUEEN - PAWN;
+    if (move.length() > 4) {
+      promotion_piece = piece + parsePromotion(move[4]) - PAWN;
+    }
+    p->bitboards[promotion_piece] |= to_mask;
+
+  } else {
+    // Set the piece on the target square.
+    p->bitboards[piece] |= to_mask;
+  }
+
+  // Check for castling.
+  if (piece % 6 == KING && abs(from_square - to_square) == 2) {
+    int rook_piece = piece - 2;
+    int rook_square;
+    if (from_square > to_square) {
+      // O-O-O
+      rook_square = from_square - 4;
+    } else {
+      // O-O
+      rook_square = from_square + 3;
+    }
+    p->bitboards[rook_piece] &= ~(1ull << rook_square);
+    p->bitboards[rook_piece] |= 1ull << ((from_square + to_square) / 2);
+  }
+
+  // Update castling availability, en passant and halfmove clock.
+  switch (piece) {
+    case WPAWN:
+      p->halfmove_clock = 0;
+      if (to_square - from_square == 16) {
+        p->en_passant_target_square = from_square + 8;
+      }
+      break;
+    case BPAWN:
+      p->halfmove_clock = 0;
+      if (to_square - from_square == -16) {
+        p->en_passant_target_square = from_square - 8;
+      }
+      break;
+    case WROOK:
+      if (from_square == 0) {
+        p->castling[WOOO] = false;
+      } else if (from_square == 7) {
+        p->castling[WOO] = false;
+      }
+      break;
+    case BROOK:
+      if (from_square == 56) {
+        p->castling[BOOO] = false;
+      } else if (from_square == 63) {
+        p->castling[BOO] = false;
+      }
+      break;
+    case WKING:
+      p->castling[WOOO] = false;
+      p->castling[WOO] = false;
+      break;
+    case BKING:
+      p->castling[BOOO] = false;
+      p->castling[BOO] = false;
+      break;
+  }
+
+  if (p->active_color == WHITE) {
+    p->active_color = BLACK;
+  } else {
+    p->active_color = WHITE;
+    p->fullmove_number++;
+  }
+
+  return 0;
 }
 
 }  // namespace habits
