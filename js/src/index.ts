@@ -94,6 +94,7 @@ board.addEventListener('drop', async (e: Event) => {
     const json = await response.json();
     legal_moves = json["legal"];
     fen = json["fen"];
+    board.setPosition(fen);
   } catch (e) {
     console.log(e);
     setAction('snapback');
