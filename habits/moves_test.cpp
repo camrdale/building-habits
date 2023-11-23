@@ -88,9 +88,49 @@ TEST(MovesTest, CalculateLegalMovesBlackKing) {
   EXPECT_THAT(calculateLegalMoves(Position::FromFen(
                   "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b kq - 0 1"))["e8"],
               testing::UnorderedElementsAre("e7", "d8", "f8", "c8", "g8"));
-  EXPECT_THAT(calculateLegalMoves(Position::FromFen(
-                  "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1"))["e8"],
-              testing::UnorderedElementsAre("e7", "f8"));
+  EXPECT_THAT(
+      calculateLegalMoves(Position::FromFen(
+          "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1"))["e8"],
+      testing::UnorderedElementsAre("e7", "f8"));
+}
+
+TEST(MovesTest, CalculateLegalMovesBishop) {
+  Position p =
+      Position::FromFen("1B4B1/2r4n/3n4/4B3/2B5/1R4R1/4n3/B6B w - - 0 1");
+  nlohmann::json json = calculateLegalMoves(p);
+
+  EXPECT_THAT(json["a1"], testing::UnorderedElementsAre("b2", "c3", "d4"));
+  EXPECT_THAT(json["h1"], testing::UnorderedElementsAre("g2", "f3", "e4", "d5",
+                                                        "c6", "b7", "a8"));
+  EXPECT_THAT(json["c4"], testing::UnorderedElementsAre("d5", "e6", "f7", "d3",
+                                                        "e2", "b5", "a6"));
+  EXPECT_THAT(json["e5"], testing::UnorderedElementsAre(
+                              "f6", "g7", "h8", "d4", "c3", "b2", "f4", "d6"));
+  EXPECT_THAT(json["b8"], testing::UnorderedElementsAre("a7", "c7"));
+  EXPECT_THAT(json["g8"],
+              testing::UnorderedElementsAre("f7", "e6", "d5", "h7"));
+}
+
+TEST(MovesTest, CalculateLegalMovesQueen) {
+  Position p =
+      Position::FromFen("Qr1RRR1Q/r2RQR2/3RrR2/8/4R3/2rQ4/8/Q1R2Q2 w - - 0 1");
+  nlohmann::json json = calculateLegalMoves(p);
+
+  EXPECT_THAT(json["a1"],
+              testing::UnorderedElementsAre("b2", "c3", "b1", "a2", "a3", "a4",
+                                            "a5", "a6", "a7"));
+  EXPECT_THAT(json["f1"],
+              testing::UnorderedElementsAre("g1", "h1", "e1", "d1", "f2", "f3",
+                                            "f4", "f5", "g2", "h3", "e2"));
+  EXPECT_THAT(json["d3"], testing::UnorderedElementsAre(
+                              "d4", "d5", "d2", "d1", "c3", "e3", "f3", "g3",
+                              "h3", "c2", "b1", "e2", "c4", "b5", "a6"));
+  EXPECT_THAT(json["e7"], testing::UnorderedElementsAre("e6"));
+  EXPECT_THAT(json["a8"],
+              testing::UnorderedElementsAre("a7", "b8", "b7", "c6", "d5"));
+  EXPECT_THAT(json["h8"],
+              testing::UnorderedElementsAre("g8", "g7", "h7", "h6", "h5", "h4",
+                                            "h3", "h2", "h1"));
 }
 
 }  // namespace

@@ -12,17 +12,19 @@ namespace habits {
 
 namespace {
 
+// TIP: to view bitboards, see https://tearth.dev/bitboard-viewer/ (Layout 1)
+
 constexpr uint64_t A_FILE = 0x101010101010101ull;
 constexpr uint64_t RANK_1 = 0xffull;
 constexpr uint64_t AB_FILES = A_FILE | (A_FILE << 1);
 constexpr uint64_t GH_FILES = (A_FILE << 7) | (A_FILE << 6);
 constexpr uint64_t RANK_12 = RANK_1 | (RANK_1 << 8);
 constexpr uint64_t RANK_78 = (RANK_1 << 56) | (RANK_1 << 48);
+constexpr uint64_t DIAGONAL_UP = 0x8040201008040201ull;
+constexpr uint64_t DIAGONAL_DOWN = 0x102040810204080ull;
 
 constexpr uint64_t KNIGHT_MOVES_C3 = 0xa1100110aull;
 constexpr uint64_t KING_MOVES_B2 = 0x70507ull;
-constexpr uint64_t WOO_CASTLE_SQUARES = 0x60ull;
-constexpr uint64_t WOOO_CASSQUARES = 0x60ull;
 
 }  // namespace
 
@@ -175,7 +177,7 @@ nlohmann::json calculateLegalMoves(const Position& p) {
         if (piece == WROOK || piece == BROOK || piece == WQUEEN ||
             piece == BQUEEN) {
           if (rank < 8) {
-            uint64_t up_move = A_FILE << (square + 8);
+            uint64_t up_move = A_FILE << (square + 8);       
             uint64_t nogo_board =
                 up_move & (active_pieces | (opponent_pieces << 8));
             if (nogo_board == 0ull) {
@@ -237,6 +239,85 @@ nlohmann::json calculateLegalMoves(const Position& p) {
 
         if (piece == WBISHOP || piece == BBISHOP || piece == WQUEEN ||
             piece == BQUEEN) {
+          if (square < 55) {
+            // Up to the right from the piece
+            uint64_t up_right_move = DIAGONAL_UP << (square + 9);
+            // Remove diagonal that gets shifted to the other side.
+            int move_mask_square = 72 - 8 * (file - rank);
+            if (move_mask_square < 64) {
+              up_right_move &= ~(DIAGONAL_UP << move_mask_square);
+            }
+            uint64_t nogo_board =
+                up_right_move & (active_pieces | (opponent_pieces << 9));
+            if (nogo_board == 0ull) {
+              // No blockers found in this direction so all are valid.
+              move_board |= up_right_move;
+            } else {
+              int first_nogo_square = __builtin_ctzll(nogo_board);
+              uint64_t up_right_move_mask = DIAGONAL_UP << first_nogo_square;
+              move_board |= up_right_move & ~up_right_move_mask;
+            }
+          }
+
+          if (square > 8) {
+            // Down to the left from the piece
+            uint64_t down_left_move = DIAGONAL_UP >> (63 - square + 9);
+            // Remove diagonal that gets shifted to the other side.
+            int move_mask_square = 8 * (rank - file) - 9;
+            if (move_mask_square >= 0) {
+              down_left_move &= ~(DIAGONAL_UP >> (63-move_mask_square));
+            }
+            uint64_t nogo_board =
+                down_left_move & (active_pieces | (opponent_pieces >> 9));
+            if (nogo_board == 0ull) {
+              // No blockers found in this direction so all are valid.
+              move_board |= down_left_move;
+            } else {
+              int last_nogo_square = 63 - __builtin_clzll(nogo_board);
+              uint64_t down_left_move_mask = DIAGONAL_UP >> (63 - last_nogo_square);
+              move_board |= down_left_move & ~down_left_move_mask;
+            }
+          }
+
+          if (square < 56) {
+            // Up to the left from the piece
+            uint64_t up_left_move = DIAGONAL_DOWN << square;
+            // Remove diagonal that gets shifted to the other side.
+            int move_mask_square = 8 * (file + rank) - 9;
+            if (move_mask_square < 64) {
+              up_left_move &= ~(DIAGONAL_DOWN << (move_mask_square - 7));
+            }
+            uint64_t nogo_board =
+                up_left_move & (active_pieces | (opponent_pieces << 7));
+            if (nogo_board == 0ull) {
+              // No blockers found in this direction so all are valid.
+              move_board |= up_left_move;
+            } else {
+              int first_nogo_square = __builtin_ctzll(nogo_board);
+              uint64_t up_left_move_mask = DIAGONAL_DOWN << (first_nogo_square - 7);
+              move_board |= up_left_move & ~up_left_move_mask;
+            }
+          }
+
+          if (square > 7) {
+            // Down to the right from the piece
+            uint64_t down_right_move = DIAGONAL_DOWN >> (63 - square);
+            // Remove diagonal that gets shifted to the other side.
+            int move_mask_shift = 8 * (16 - rank - file);
+            if (move_mask_shift < 64) {
+              down_right_move &= ~(DIAGONAL_DOWN >> move_mask_shift);
+            }
+            uint64_t nogo_board =
+                down_right_move & (active_pieces | (opponent_pieces >> 7));
+            if (nogo_board == 0ull) {
+              // No blockers found in this direction so all are valid.
+              move_board |= down_right_move;
+            } else {
+              int last_nogo_square = 63 - __builtin_clzll(nogo_board);
+              uint64_t down_right_move_mask = DIAGONAL_DOWN >> (63 - last_nogo_square - 7);
+              move_board |= down_right_move & ~down_right_move_mask;
+            }
+          }
         }
 
         if (move_board != 0ull) {
