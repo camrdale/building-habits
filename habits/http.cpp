@@ -123,7 +123,7 @@ void listenHttp(bool debug) {
                    exit(1);
                  }
                  std::cout << "HTTP server running, go to http://localhost:"
-                           << port << std::endl;
+                           << port << "/index.html" << std::endl;
                })
       .Run();
 }

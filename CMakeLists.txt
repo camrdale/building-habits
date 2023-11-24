@@ -12,6 +12,11 @@ add_executable(BuildingHabits main.cpp)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_COMPONENTS_ALL binary)
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 include(CPack)
 
 find_package(fmt REQUIRED)
@@ -39,3 +44,11 @@ FetchContent_Declare(
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+
+install(TARGETS BuildingHabits DESTINATION bin COMPONENT binary)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/static/"
+  DESTINATION static
+  COMPONENT binary
+  PATTERN ".gitignore" EXCLUDE
+)
+cpack_add_component(binary)
