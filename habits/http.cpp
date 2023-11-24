@@ -31,7 +31,19 @@ std::string url_decode(std::string encoded) {
   return result;
 }
 
-void legalMoves(expresscpp::request_t req, expresscpp::response_t res) {
+nlohmann::json buildResponse(const Position& p) {
+  nlohmann::json response;
+  response["fen"] = p.ToFen();
+  response["turn"] = p.active_color == WHITE ? "w" : "b";
+  response["legal"] = legalMovesJson(p);
+  bool is_check = isActiveColorInCheck(p);
+  response["in_check"] = is_check;
+  response["in_checkmate"] = is_check && response["legal"].empty();
+  response["in_draw"] = (!is_check && response["legal"].empty()) || p.IsDraw();
+  return response;
+}
+
+void newGame(expresscpp::request_t req, expresscpp::response_t res) {
   auto fen_param = req->GetQueryParams().find("fen");
   if (fen_param == req->GetQueryParams().end()) {
     res->SetStatus(400);
@@ -40,17 +52,13 @@ void legalMoves(expresscpp::request_t req, expresscpp::response_t res) {
   }
   const std::string& fen = url_decode(fen_param->second);
 
-  expresscpp::Console::Log("Request: legal moves in position: " + fen);
+  expresscpp::Console::Log("Request: new game in position: " + fen);
 
-  habits::Position p = habits::Position::FromFen(fen);
+  Position p = Position::FromFen(fen);
 
-  nlohmann::json response;
-  response["legal"] = habits::legalMovesJson(p);
-  response["turn"] = p.active_color == habits::WHITE ? "w" : "b";
+  nlohmann::json response = buildResponse(p);
   std::string response_string = response.dump();
-
   expresscpp::Console::Log("Response: " + response_string);
-
   res->Json(response_string);
 }
 
@@ -72,7 +80,7 @@ void makeMove(expresscpp::request_t req, expresscpp::response_t res) {
 
   expresscpp::Console::Log("Request: move " + move + " in position: " + fen);
 
-  habits::Position p = habits::Position::FromFen(fen);
+  Position p = Position::FromFen(fen);
   int result = habits::move(&p, move);
 
   if (result != 0) {
@@ -82,17 +90,9 @@ void makeMove(expresscpp::request_t req, expresscpp::response_t res) {
     return;
   }
 
-  nlohmann::json response;
-  response["fen"] = p.ToFen();
-  response["legal"] = habits::legalMovesJson(p);
-  bool is_check = habits::isActiveColorInCheck(p);
-  response["in_check"] = is_check;
-  response["in_checkmate"] = is_check && response["legal"].empty();
-  response["in_draw"] = (!is_check && response["legal"].empty()) || p.IsDraw();
+  nlohmann::json response = buildResponse(p);
   std::string response_string = response.dump();
-
   expresscpp::Console::Log("Response: " + response_string);
-
   res->Json(response_string);
 }
 
@@ -106,7 +106,7 @@ void listenHttp(bool debug) {
   }
 
   // Rest RPC API endpoints.
-  expresscpp->Get("/engine/legal", legalMoves);
+  expresscpp->Get("/engine/newgame", newGame);
   expresscpp->Get("/engine/move/:move", makeMove);
 
   // Fall back to attempting to serve static files.

@@ -9,19 +9,25 @@ function isCustomEvent(event: Event): event is CustomEvent {
   return 'detail' in event;
 }
 
-interface Moves {
-  [key: string]: string[];
+interface GameState {
+  fen: string;
+  turn: string;
+  legal: { [key: string]: string[] };
+  in_check: boolean;
+  in_checkmate: boolean;
+  in_draw: boolean;
 }
 
-const params = new URLSearchParams(window.location.search);
-let fen = params.get('fen') || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-board.setPosition(fen, false);
-let turn = 'w';
+//board.setPosition(fen, false);
+let state: GameState = {
+  fen: new URLSearchParams(window.location.search).get('fen') || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  turn: 'w',
+  legal: {},
+  in_check: false,
+  in_checkmate: false,
+  in_draw: false
+};
 let pgn = '';
-let in_checkmate = false;
-let in_draw = false;
-let in_check = false;
-let legal_moves: Moves = {};
 
 const highlightStyles = document.createElement('style');
 document.head.append(highlightStyles);
@@ -51,14 +57,14 @@ board.addEventListener('drag-start', (e: Event) => {
   const { piece } = e.detail;
 
   // do not pick up pieces if the game is over
-  if (in_checkmate || in_draw) {
+  if (state.in_checkmate || state.in_draw) {
     e.preventDefault();
     return;
   }
 
   // only pick up pieces for the side to move
-  if ((turn === 'w' && piece.search(/^b/) !== -1) ||
-    (turn === 'b' && piece.search(/^w/) !== -1)) {
+  if ((state.turn === 'w' && piece.search(/^b/) !== -1) ||
+    (state.turn === 'b' && piece.search(/^w/) !== -1)) {
     e.preventDefault();
     return;
   }
@@ -68,7 +74,7 @@ board.addEventListener('drop', async (e: Event) => {
   if (!isCustomEvent(e))
     throw new Error('not a custom event');
 
-  const { source, target, setAction } = e.detail;
+  const { source, target, piece, setAction } = e.detail;
 
   removeGreySquares();
 
@@ -78,14 +84,20 @@ board.addEventListener('drop', async (e: Event) => {
   }
 
   // Check for illegal moves
-  if (!(source in legal_moves && legal_moves[source].includes(target))) {
+  if (!(source in state.legal && state.legal[source].includes(target))) {
     setAction('snapback');
     return;
   }
 
-  const params = new URLSearchParams({ fen: fen });
+  let move = source + target;
+  if ((piece === 'wP' && target.charAt(0) === 'h') || (piece === 'bP' && target.charAt(0) === 'a')) {
+    // Always promote to queen for now.
+    move += 'q';
+  }
+
+  const params = new URLSearchParams({ fen: state.fen });
   try {
-    const response = await fetch('http://localhost:8080/engine/move/' + source + target + 'q?' + params.toString());
+    const response = await fetch('http://localhost:8080/engine/move/' + move + '?' + params.toString());
     if (response.status !== 200) {
       console.log(response);
       setAction('snapback');
@@ -93,30 +105,19 @@ board.addEventListener('drop', async (e: Event) => {
     }
     const json = await response.json();
     console.log(json);
-    legal_moves = json['legal'];
-    in_check = json['in_check'];
-    in_checkmate = json['in_checkmate'];
-    in_draw = json['in_draw'];
-    fen = json['fen'];
-    board.setPosition(fen);
+    state = json;
+
+    board.setPosition(state.fen);
+    if (pgn != '') {
+      pgn += ' ';
+    }
+    pgn += move;
+    updateStatus();
   } catch (e) {
     console.log(e);
     setAction('snapback');
     return;
   }
-
-  if (pgn != '') {
-    pgn += ' ';
-  }
-  pgn += source + target;
-
-  if (turn === 'w') {
-    turn = 'b';
-  } else {
-    turn = 'w';
-  }
-
-  updateStatus(fen);
 });
 
 board.addEventListener('mouseover-square', (e) => {
@@ -125,12 +126,12 @@ board.addEventListener('mouseover-square', (e) => {
 
   const { square } = e.detail;
 
-  if (in_checkmate || in_draw) {
+  if (state.in_checkmate || state.in_draw) {
     return;
   }
 
   // get list of possible moves for this square
-  const moves = legal_moves[square];
+  const moves = state.legal[square];
 
   // exit if there are no moves available for this square
   if (!moves || moves.length === 0) {
@@ -150,23 +151,22 @@ board.addEventListener('mouseout-square', (_e: Event) => {
   removeGreySquares();
 });
 
-async function initializeBoard(fen: string) {
-  fen += ' ' + turn + ' KQkq - 0 1';
-  const params = new URLSearchParams({ fen: fen });
+async function initializeBoard() {
+  const params = new URLSearchParams({ fen: state.fen });
   try {
-    const response = await fetch('http://localhost:8080/engine/legal?' + params.toString());
+    const response = await fetch('http://localhost:8080/engine/newgame?' + params.toString());
     if (response.status === 200) {
       const json = await response.json();
       console.log(json);
-      legal_moves = json['legal'];
-      turn = json['turn'] || 'w';
+      state = json;
+      board!.setPosition(state.fen, false);
+      updateStatus();
     } else {
       console.log(response);
     }
   } catch (e) {
     console.log(e);
   }
-  updateStatus(fen);
 }
 
 // update the board position after the piece snap
@@ -175,21 +175,21 @@ board.addEventListener('snap-end', (e: Event) => {
   if (!isCustomEvent(e))
     throw new Error('not a custom event');
 
-  board.setPosition(fen);
+  board.setPosition(state.fen);
 });
 
-function updateStatus(fen: string) {
+function updateStatus() {
   let status = '';
 
   let moveColor = 'White';
-  if (turn === 'b') {
+  if (state.turn === 'b') {
     moveColor = 'Black';
   }
 
-  if (in_checkmate) {
+  if (state.in_checkmate) {
     // checkmate?
     status = `Game over, ${moveColor} is in checkmate.`;
-  } else if (in_draw) {
+  } else if (state.in_draw) {
     // draw?
     status = 'Game over, drawn position';
   } else {
@@ -197,14 +197,14 @@ function updateStatus(fen: string) {
     status = `${moveColor} to move`;
 
     // check?
-    if (in_check) {
+    if (state.in_check) {
       status += `, ${moveColor} is in check`;
     }
   }
 
   document.querySelector('#status')!.innerHTML = status;
-  document.querySelector('#fen')!.innerHTML = fen || '';
+  document.querySelector('#fen')!.innerHTML = state.fen || '';
   document.querySelector('#pgn')!.innerHTML = pgn;
 }
 
-initializeBoard(fen);
+initializeBoard();
