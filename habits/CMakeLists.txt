@@ -10,5 +10,5 @@ target_link_libraries(position_test habits GTest::gtest_main gmock)
 add_executable(moves_test moves_test.cpp)
 target_link_libraries(moves_test habits GTest::gtest_main gmock)
  
-gtest_discover_tests(position_test)
-gtest_discover_tests(moves_test)
+add_test(position_test position_test)
+add_test(moves_test moves_test)

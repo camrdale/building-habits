@@ -8,10 +8,12 @@
 
 namespace habits {
 
-// Determine the legal moves for the active color in the Position.
-// The map's keys are squares that currently contain a piece for the active
-// color, the values are a bitboard of all the legal moves for the piece on that
-// square. Squares of pieces with no legal moves will not be present.
+// Determine the possible moves for the active color in the Position.
+// Possible moves have not been verified to not result in check, so they may not
+// be legal. The map's keys are squares that currently contain a piece for the
+// active color, the values are a bitboard of all the possible moves for the
+// piece on that square. Squares of pieces with no possible moves will not be
+// present.
 std::map<int, uint64_t> possibleMoves(const Position& p);
 
 // Determine the legal moves for the active color in the Position.

@@ -157,22 +157,37 @@ std::map<int, uint64_t> possibleMoves(const Position& p) {
           // Remove friendly pieces.
           move_board &= ~active_pieces;
           // Add in castling moves
-          // TODO: check for opponents attacking castling squares
           if (piece == WKING) {
             if (p.castling[WOO] && (0x60ull & all_pieces) == 0ull) {
-              move_board |= 0x40ull;
+              Position tmpP = p.Duplicate();
+              tmpP.bitboards[WKING] |= 0x70ull;
+              if (!isActiveColorInCheck(tmpP)) {
+                move_board |= 0x40ull;
+              }
             }
             if (p.castling[WOOO] && (0xeull & all_pieces) == 0ull) {
-              move_board |= 0x4ull;
+              Position tmpP = p.Duplicate();
+              tmpP.bitboards[WKING] |= 0x1cull;
+              if (!isActiveColorInCheck(tmpP)) {
+                move_board |= 0x4ull;
+              }
             }
           } else {
             if (p.castling[BOO] &&
                 (0x6000000000000000ull & all_pieces) == 0ull) {
-              move_board |= 0x4000000000000000ull;
+              Position tmpP = p.Duplicate();
+              tmpP.bitboards[BKING] |= 0x7000000000000000ull;
+              if (!isActiveColorInCheck(tmpP)) {
+                move_board |= 0x4000000000000000ull;
+              }
             }
             if (p.castling[BOOO] &&
                 (0xe00000000000000ull & all_pieces) == 0ull) {
-              move_board |= 0x400000000000000ull;
+              Position tmpP = p.Duplicate();
+              tmpP.bitboards[BKING] |= 0x1c00000000000000ull;
+              if (!isActiveColorInCheck(tmpP)) {
+                move_board |= 0x400000000000000ull;
+              }
             }
           }
         }

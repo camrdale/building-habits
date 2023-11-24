@@ -74,6 +74,14 @@ TEST(MovesTest, CalculateLegalMovesWhiteKing) {
   EXPECT_THAT(legalMovesJson(Position::FromFen(
                   "8/8/8/8/8/8/1Q1N1NP1/RN2K1NR w KQ - 0 1"))["e1"],
               testing::UnorderedElementsAre("e2", "d1", "f1"));
+  EXPECT_THAT(
+      legalMovesJson(Position::FromFen(
+          "rn1qkbnr/ppp2ppp/8/1b6/8/8/PPPP1PPP/RNBQK2R w KQkq - 3 4"))["e1"],
+      testing::IsEmpty());
+  EXPECT_THAT(
+      legalMovesJson(Position::FromFen(
+          "rnbqk1nr/ppp2ppp/8/8/1b6/8/PPP1PPPP/RNBQK2R w KQkq - 3 4"))["e1"],
+      testing::UnorderedElementsAre("f1"));
 }
 
 TEST(MovesTest, CalculateLegalMovesBlackKing) {
@@ -89,6 +97,14 @@ TEST(MovesTest, CalculateLegalMovesBlackKing) {
       legalMovesJson(Position::FromFen(
           "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1"))["e8"],
       testing::UnorderedElementsAre("e7", "f8"));
+  EXPECT_THAT(
+      legalMovesJson(Position::FromFen(
+          "r3kbnr/pp2pppp/8/1B6/8/8/PPPP1PPP/RNBQK2R b KQkq - 0 1"))["e8"],
+      testing::UnorderedElementsAre("d8"));
+  EXPECT_THAT(
+      legalMovesJson(Position::FromFen(
+          "r3kbnr/pppp1ppp/8/6B1/8/8/PPP1PPPP/RN1QKB1R b KQkq - 0 1"))["e8"],
+      testing::IsEmpty());
 }
 
 TEST(MovesTest, CalculateLegalMovesBishop) {
