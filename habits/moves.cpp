@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string_view>
@@ -30,8 +31,8 @@ constexpr uint64_t KING_MOVES_B2 = 0x70507ull;
 
 }  // namespace
 
-nlohmann::json calculateLegalMoves(const Position& p) {
-  nlohmann::json legal;
+std::map<int, uint64_t> possibleMoves(const Position& p) {
+  std::map<int, uint64_t> legal;
 
   uint64_t active_pieces = 0ull;
   uint64_t opponent_pieces = 0ull;
@@ -326,17 +327,7 @@ nlohmann::json calculateLegalMoves(const Position& p) {
         }
 
         if (move_board != 0ull) {
-          nlohmann::json targets = nlohmann::json::array();
-          int move_square = 0;
-          uint64_t move_mask = 1ull;
-          while (move_square < 64) {
-            if ((move_board & move_mask) != 0ull) {
-              targets.push_back(algebraic(move_square));
-            }
-            move_square++;
-            move_mask <<= 1;
-          }
-          legal[algebraic(square)] = std::move(targets);
+          legal[square] = move_board;
         }
       }
       square++;
@@ -346,9 +337,51 @@ nlohmann::json calculateLegalMoves(const Position& p) {
   return legal;
 }
 
-int move(Position* p, std::string_view move) {
-  int from_square = parseAlgebraic(move.substr(0, 2));
-  int to_square = parseAlgebraic(move.substr(2, 2));
+nlohmann::json legalMovesJson(const Position& p) {
+  nlohmann::json legal;
+
+  std::map<int, uint64_t> legal_move_boards = possibleMoves(p);
+  for (auto [square, move_board] : legal_move_boards) {
+    if (move_board != 0ull) {
+      nlohmann::json targets = nlohmann::json::array();
+      int move_square = 0;
+      uint64_t move_mask = 1ull;
+      while (move_square < 64) {
+        if ((move_board & move_mask) != 0ull) {
+          // Try the move (promotion type can't affect check).
+          Position tmpP = p.Duplicate();
+          moveInternal(&tmpP, square, move_square, QUEEN);
+          // Don't add it if it results in being in check.
+          if (!isActiveColorInCheck(tmpP)) {
+            targets.push_back(algebraic(move_square));
+          }
+        }
+        move_square++;
+        move_mask <<= 1;
+      }
+      if (!targets.empty()) {
+        legal[algebraic(square)] = std::move(targets);
+      }
+    }
+  }
+
+  return legal;
+}
+
+bool isActiveColorInCheck(const Position& p) {
+  std::map<int, uint64_t> opponent_moves = possibleMoves(p.ForOpponent());
+  uint64_t king_board = p.bitboards[p.active_color == WHITE ? WKING : BKING];
+  for (auto [square, move_board] : opponent_moves) {
+    if ((king_board & move_board) != 0ull) {
+      return true;
+      break;
+    }
+  }
+  return false;
+}
+
+int moveInternal(Position* p, int from_square, int to_square,
+                 Piece promote_to) {
   uint64_t from_mask = 1ull << from_square;
   uint64_t to_mask = 1ull << to_square;
 
@@ -362,8 +395,7 @@ int move(Position* p, std::string_view move) {
   }
   if (piece >= starting_piece + 6) {
     std::cout << "Failed to find a piece for " << p->active_color
-              << " on square " << from_square << " (" << move << ")"
-              << std::endl;
+              << " on square " << from_square << std::endl;
     return 1;
   }
   p->halfmove_clock++;
@@ -395,10 +427,7 @@ int move(Position* p, std::string_view move) {
 
   if (piece % 6 == PAWN && (to_square >= 56 || to_square <= 7)) {
     // Promote to queen by default
-    int promotion_piece = piece + QUEEN - PAWN;
-    if (move.length() > 4) {
-      promotion_piece = piece + parsePromotion(move[4]) - PAWN;
-    }
+    int promotion_piece = piece + promote_to - PAWN;
     p->bitboards[promotion_piece] |= to_mask;
 
   } else {
@@ -459,13 +488,33 @@ int move(Position* p, std::string_view move) {
       break;
   }
 
+  if (p->active_color == BLACK) {
+    p->fullmove_number++;
+  }
+
+  return 0;
+}
+
+int move(Position* p, std::string_view move) {
+  int from_square = parseAlgebraic(move.substr(0, 2));
+  int to_square = parseAlgebraic(move.substr(2, 2));
+
+  // Promote to queen by default
+  Piece promotion_piece = QUEEN;
+  if (move.length() > 4) {
+    promotion_piece = parsePromotion(move[4]);
+  }
+
+  int result = moveInternal(p, from_square, to_square, promotion_piece);
+  if (result != 0) {
+    return result;
+  }
+
   if (p->active_color == WHITE) {
     p->active_color = BLACK;
   } else {
     p->active_color = WHITE;
-    p->fullmove_number++;
   }
-
   return 0;
 }
 

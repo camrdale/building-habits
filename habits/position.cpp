@@ -13,7 +13,7 @@ namespace {
 
 constexpr std::string_view FEN_PIECES = "PNBRQKpnbrqk";
 
-} // namespace
+}  // namespace
 
 std::string algebraic(int square) {
   std::string an;
@@ -33,6 +33,18 @@ Piece parsePromotion(char promotion) {
     return QUEEN;
   }
   return static_cast<Piece>(piece);
+}
+
+bool Position::IsDraw() const {
+  if (halfmove_clock >= 100) {
+    return true;
+  }
+  for (int piece = WPAWN; piece < BKING; piece++) {
+    if (piece != WKING && bitboards[piece] != 0ull) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Position Position::FromFen(std::string_view fen) {
@@ -196,6 +208,29 @@ std::string Position::ToFen() const {
   fen += " " + std::to_string(fullmove_number);
 
   return fen;
+}
+
+Position Position::ForOpponent() const {
+  Position p = Duplicate();
+  p.active_color = active_color == WHITE ? BLACK : WHITE;
+  p.en_passant_target_square = -1;
+  return p;
+}
+
+Position Position::Duplicate() const {
+  Position p;
+  p.active_color = active_color;
+  for (int piece = 0; piece < 12; piece++) {
+    p.bitboards[piece] = bitboards[piece];
+  }
+  p.castling[0] = castling[0];
+  p.castling[1] = castling[1];
+  p.castling[2] = castling[2];
+  p.castling[3] = castling[3];
+  p.en_passant_target_square = en_passant_target_square;
+  p.halfmove_clock = halfmove_clock;
+  p.fullmove_number = fullmove_number;
+  return p;
 }
 
 }  // namespace habits

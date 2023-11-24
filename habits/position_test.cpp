@@ -79,5 +79,36 @@ TEST(PositionTest, ToFen) {
   EXPECT_EQ(p.ToFen(), "8/3p2p1/8/8/8/8/P2P3P/8 b - - 56 199");
 }
 
+TEST(PositionTest, IsDraw) {
+  EXPECT_EQ(Position::FromFen("8/7k/7P/8/8/8/8/4K3 b - - 56 199").IsDraw(),
+            false);
+  EXPECT_EQ(Position::FromFen("8/8/7k/8/8/8/8/4K3 w - - 56 199").IsDraw(),
+            true);
+  EXPECT_EQ(Position::FromFen("8/7k/7P/8/8/8/8/4K3 b - - 100 199").IsDraw(),
+            true);
+}
+
+TEST(PositionTest, ForOpponent) {
+  Position p = Position::FromFen("8/3p2p1/8/8/8/8/P2P3P/8 b - - 56 199");
+  Position opponent = p.ForOpponent();
+
+  EXPECT_EQ(opponent.bitboards[WPAWN], p.bitboards[WPAWN]);
+  EXPECT_EQ(opponent.bitboards[BPAWN], p.bitboards[BPAWN]);
+  EXPECT_EQ(opponent.active_color, WHITE);
+  EXPECT_EQ(opponent.halfmove_clock, p.halfmove_clock);
+  EXPECT_EQ(opponent.fullmove_number, p.fullmove_number);
+}
+
+TEST(PositionTest, Duplicate) {
+  Position p = Position::FromFen("8/3p2p1/8/8/8/8/P2P3P/8 b - - 56 199");
+  Position copy = p.Duplicate();
+
+  EXPECT_EQ(copy.bitboards[WPAWN], p.bitboards[WPAWN]);
+  EXPECT_EQ(copy.bitboards[BPAWN], p.bitboards[BPAWN]);
+  EXPECT_EQ(copy.active_color, p.active_color);
+  EXPECT_EQ(copy.halfmove_clock, p.halfmove_clock);
+  EXPECT_EQ(copy.fullmove_number, p.fullmove_number);
+}
+
 }  // namespace
 }  // namespace habits

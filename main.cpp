@@ -36,7 +36,8 @@ void legalMoves(expresscpp::request_t req, expresscpp::response_t res) {
   habits::Position p = habits::Position::FromFen(url_decode(fen->second));
 
   nlohmann::json response;
-  response["legal"] = habits::calculateLegalMoves(p);
+  response["legal"] = habits::legalMovesJson(p);
+  response["turn"] = p.active_color == habits::WHITE ? "w" : "b";
 
   res->Json(response.dump());
 }
@@ -66,7 +67,11 @@ void makeMove(expresscpp::request_t req, expresscpp::response_t res) {
 
   nlohmann::json response;
   response["fen"] = p.ToFen();
-  response["legal"] = habits::calculateLegalMoves(p);
+  response["legal"] = habits::legalMovesJson(p);
+  bool is_check = habits::isActiveColorInCheck(p);
+  response["in_check"] = is_check;
+  response["in_checkmate"] = is_check && response["legal"].empty();
+  response["in_draw"] = (!is_check && response["legal"].empty()) || p.IsDraw();
 
   res->Json(response.dump());
 }

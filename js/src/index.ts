@@ -13,10 +13,11 @@ interface Moves {
   [key: string]: string[];
 }
 
-let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const params = new URLSearchParams(window.location.search);
+let fen = params.get('fen') || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+board.setPosition(fen, false);
 let turn = 'w';
 let pgn = '';
-let game_over = false;
 let in_checkmate = false;
 let in_draw = false;
 let in_check = false;
@@ -48,10 +49,9 @@ board.addEventListener('drag-start', (e: Event) => {
     throw new Error('not a custom event');
 
   const { piece } = e.detail;
-  // const {source, piece, position, orientation} = e.detail;
 
   // do not pick up pieces if the game is over
-  if (game_over) {
+  if (in_checkmate || in_draw) {
     e.preventDefault();
     return;
   }
@@ -92,8 +92,12 @@ board.addEventListener('drop', async (e: Event) => {
       return;
     }
     const json = await response.json();
-    legal_moves = json["legal"];
-    fen = json["fen"];
+    console.log(json);
+    legal_moves = json['legal'];
+    in_check = json['in_check'];
+    in_checkmate = json['in_checkmate'];
+    in_draw = json['in_draw'];
+    fen = json['fen'];
     board.setPosition(fen);
   } catch (e) {
     console.log(e);
@@ -121,6 +125,10 @@ board.addEventListener('mouseover-square', (e) => {
 
   const { square } = e.detail;
 
+  if (in_checkmate || in_draw) {
+    return;
+  }
+
   // get list of possible moves for this square
   const moves = legal_moves[square];
 
@@ -142,32 +150,23 @@ board.addEventListener('mouseout-square', (_e: Event) => {
   removeGreySquares();
 });
 
-// board.addEventListener('change', (e: Event) => {
-//   if (!isCustomEvent(e))
-//     throw new Error('not a custom event');
-
-//   const { value } = e.detail;
-
-//   legalMoves(objToFen(value) || "");
-//   updateStatus(objToFen(value) || "");
-// });
-
-function legalMoves(fen: string) {
-  fen += " " + turn + " KQkq - 0 1";
+async function initializeBoard(fen: string) {
+  fen += ' ' + turn + ' KQkq - 0 1';
   const params = new URLSearchParams({ fen: fen });
   try {
-    fetch('http://localhost:8080/engine/legal?' + params.toString())
-      .then(response => {
-        if (response.status === 200) {
-          response.json().then((json: any) => legal_moves = json["legal"]).catch(e => console.log(e));
-        } else {
-          console.log(response);
-        }
-      })
-      .catch(e => console.log(e));
+    const response = await fetch('http://localhost:8080/engine/legal?' + params.toString());
+    if (response.status === 200) {
+      const json = await response.json();
+      console.log(json);
+      legal_moves = json['legal'];
+      turn = json['turn'] || 'w';
+    } else {
+      console.log(response);
+    }
   } catch (e) {
     console.log(e);
   }
+  updateStatus(fen);
 }
 
 // update the board position after the piece snap
@@ -208,5 +207,4 @@ function updateStatus(fen: string) {
   document.querySelector('#pgn')!.innerHTML = pgn;
 }
 
-legalMoves(fen);
-updateStatus(fen);
+initializeBoard(fen);
