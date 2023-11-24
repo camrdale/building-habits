@@ -1,4 +1,4 @@
-add_library(habits position.hpp position.cpp moves.hpp moves.cpp)
+add_library(habits position.hpp position.cpp moves.hpp moves.cpp http.hpp http.cpp)
 
 include(GoogleTest)
 
