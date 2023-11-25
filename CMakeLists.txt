@@ -12,7 +12,7 @@ add_executable(BuildingHabits main.cpp)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-set(CPACK_GENERATOR "ZIP")
+set(CPACK_GENERATOR "TGZ")
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
 set(CPACK_VERBATIM_VARIABLES YES)
 set(CPACK_COMPONENTS_ALL binary)
@@ -26,7 +26,7 @@ find_package(CURL REQUIRED)
 
 add_subdirectory(habits)
 
-target_link_libraries(BuildingHabits PRIVATE habits nlohmann_json::nlohmann_json expresscpp::expresscpp curl ws2_32 wsock32 fmt)
+target_link_libraries(BuildingHabits PRIVATE habits nlohmann_json::nlohmann_json expresscpp::expresscpp curl fmt)
 
 target_include_directories(BuildingHabits PUBLIC
                           "${PROJECT_BINARY_DIR}"
@@ -41,11 +41,10 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG        f8d7d77c06936315286eb55f8de22cd23c188571 # release-1.14.0
 )
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 install(TARGETS BuildingHabits DESTINATION bin COMPONENT binary)
+set_target_properties(BuildingHabits PROPERTIES LINK_FLAGS_RELEASE -s)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/static/"
   DESTINATION static
   COMPONENT binary
