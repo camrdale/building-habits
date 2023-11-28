@@ -10,11 +10,14 @@ namespace habits {
 
 // Determine the possible moves for the active color in the Position.
 // Possible moves have not been verified to not result in check, so they may not
-// be legal. The map's keys are squares that currently contain a piece for the
+// be legal. The map's keys are the pieces and their current squares for the
 // active color, the values are a bitboard of all the possible moves for the
-// piece on that square. Squares of pieces with no possible moves will not be
-// present.
-std::map<int, uint64_t> possibleMoves(const Position& p);
+// piece on that square. Pieces with no possible moves will not be present.
+std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
+    const Position& p);
+
+std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
+    const Position& p);
 
 // Determine the legal moves for the active color in the Position.
 // The returned JSON maps the squares (in algebraic notation) that contain
@@ -34,5 +37,17 @@ int move(Position* p, std::string_view move);
 
 // Determine if the current active color of the Position is in check.
 bool isActiveColorInCheck(const Position& p);
+
+// Determine who controls the squares on the board.
+// The map's keys are the squares of the board (squares that no piece can attack
+// are not present). The values are the difference in the inverse value of
+// attackers of the square for each side, positive meaning the active color has
+// more inverse value for attackers of the square, negative if the opponent has
+// more.
+std::map<int, int> controlSquares(const Position& p);
+
+// Calculated inverse value of the piece as an attacker.
+// Pawns are valued the most, Kings the least.
+int inverseAttackValue(int piece);
 
 }  // namespace habits

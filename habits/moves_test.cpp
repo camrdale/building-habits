@@ -244,5 +244,33 @@ TEST(MovesTest, IsActiveColorInCheck) {
             true);
 }
 
+TEST(MovesTest, ControlSquaresBasic) {
+  Position p = Position::FromFen("7r/8/8/8/8/8/8/2R5 w - - 0 1");
+  std::map<int, int> control_squares = controlSquares(p);
+  EXPECT_EQ(control_squares[0], 100);
+  EXPECT_EQ(control_squares[1], 100);
+  EXPECT_EQ(control_squares[2], 0);
+  EXPECT_EQ(control_squares[3], 100);
+  EXPECT_EQ(control_squares[8], 0);
+  EXPECT_EQ(control_squares[10], 100);
+  EXPECT_EQ(control_squares[18], 100);
+  EXPECT_EQ(control_squares[58], 0);
+  EXPECT_EQ(control_squares[59], -100);
+  EXPECT_EQ(control_squares[62], -100);
+  EXPECT_EQ(control_squares[63], 0);
+}
+
+TEST(MovesTest, ControlSquaresDefendPieces) {
+  Position p = Position::FromFen("6r1/8/8/8/8/3P4/6P1/5B2 w - - 0 1");
+  std::map<int, int> control_squares = controlSquares(p);
+  EXPECT_EQ(control_squares[5], 0);
+  EXPECT_EQ(control_squares[6], 0);
+  EXPECT_EQ(control_squares[14], 900);
+  EXPECT_EQ(control_squares[12], 1000);
+  EXPECT_EQ(control_squares[19], 1000);
+  EXPECT_EQ(control_squares[26], 10000);
+  EXPECT_EQ(control_squares[33], 0);
+}
+
 }  // namespace
 }  // namespace habits

@@ -20,7 +20,8 @@ int main(int argc, char* argv[]) {
     debug = true;
   }
 
-  habits::listenHttp(debug);
+  habits::HttpServer http;
+  http.listenHttp(debug);
 
   return 0;
 }

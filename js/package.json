@@ -4,7 +4,7 @@
   "description": "GUI for the Building Habits engine",
   "homepage": "https://github.com/camrdale/building-habits",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "git://github.com/camrdale/building-habits.git"

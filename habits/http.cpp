@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -15,6 +16,7 @@
 #include "expresscpp/middleware/serve_static_provider.hpp"
 #include "moves.hpp"
 #include "position.hpp"
+#include "search.hpp"
 
 namespace habits {
 
@@ -31,9 +33,10 @@ std::string url_decode(std::string encoded) {
   return result;
 }
 
-nlohmann::json buildResponse(const Position& p) {
+nlohmann::json buildResponse(const Position& p, const std::string& last_move) {
   nlohmann::json response;
   response["fen"] = p.ToFen();
+  response["last_move"] = last_move;
   response["turn"] = p.active_color == WHITE ? "w" : "b";
   response["legal"] = legalMovesJson(p);
   bool is_check = isActiveColorInCheck(p);
@@ -43,7 +46,10 @@ nlohmann::json buildResponse(const Position& p) {
   return response;
 }
 
-void newGame(expresscpp::request_t req, expresscpp::response_t res) {
+}  // namespace
+
+void HttpServer::newGame(expresscpp::request_t req,
+                         expresscpp::response_t res) {
   auto fen_param = req->GetQueryParams().find("fen");
   if (fen_param == req->GetQueryParams().end()) {
     res->SetStatus(400);
@@ -56,13 +62,16 @@ void newGame(expresscpp::request_t req, expresscpp::response_t res) {
 
   Position p = Position::FromFen(fen);
 
-  nlohmann::json response = buildResponse(p);
+  game_ = Game();
+
+  nlohmann::json response = buildResponse(p, "");
   std::string response_string = response.dump();
   expresscpp::Console::Log("Response: " + response_string);
   res->Json(response_string);
 }
 
-void makeMove(expresscpp::request_t req, expresscpp::response_t res) {
+void HttpServer::makeMove(expresscpp::request_t req,
+                          expresscpp::response_t res) {
   auto move_param = req->GetParams().find("move");
   if (move_param == req->GetParams().end()) {
     res->SetStatus(400);
@@ -90,15 +99,47 @@ void makeMove(expresscpp::request_t req, expresscpp::response_t res) {
     return;
   }
 
-  nlohmann::json response = buildResponse(p);
+  game_.opponentMove(move);
+
+  nlohmann::json response = buildResponse(p, move);
   std::string response_string = response.dump();
   expresscpp::Console::Log("Response: " + response_string);
   res->Json(response_string);
 }
 
-}  // namespace
+void HttpServer::search(expresscpp::request_t req, expresscpp::response_t res) {
+  auto fen_param = req->GetQueryParams().find("fen");
+  if (fen_param == req->GetQueryParams().end()) {
+    res->SetStatus(400);
+    res->Send("Missing 'fen' query param");
+    return;
+  }
+  const std::string& fen = url_decode(fen_param->second);
 
-void listenHttp(bool debug) {
+  expresscpp::Console::Log("Request: find best move in position: " + fen);
+
+  Position p = Position::FromFen(fen);
+
+  std::string move = game_.bestMove(p);
+
+  expresscpp::Console::Log("Intermediate: found best move: " + move);
+
+  int result = habits::move(&p, move);
+
+  if (result != 0) {
+    expresscpp::Console::Error("ERROR: illegal move");
+    res->SetStatus(400);
+    res->Send("Illegal move");
+    return;
+  }
+
+  nlohmann::json response = buildResponse(p, move);
+  std::string response_string = response.dump();
+  expresscpp::Console::Log("Response: " + response_string);
+  res->Json(response_string);
+}
+
+void HttpServer::listenHttp(bool debug) {
   std::shared_ptr<expresscpp::ExpressCpp> expresscpp =
       std::make_shared<expresscpp::ExpressCpp>();
   if (debug) {
@@ -106,8 +147,15 @@ void listenHttp(bool debug) {
   }
 
   // Rest RPC API endpoints.
-  expresscpp->Get("/engine/newgame", newGame);
-  expresscpp->Get("/engine/move/:move", makeMove);
+  expresscpp->Get("/engine/newgame",
+                  [this](expresscpp::request_t req,
+                         expresscpp::response_t res) { newGame(req, res); });
+  expresscpp->Get("/engine/move/:move",
+                  [this](expresscpp::request_t req,
+                         expresscpp::response_t res) { makeMove(req, res); });
+  expresscpp->Get("/engine/search",
+                  [this](expresscpp::request_t req,
+                         expresscpp::response_t res) { search(req, res); });
 
   // Fall back to attempting to serve static files.
   expresscpp->Use(expresscpp::StaticFileProvider("../static"));

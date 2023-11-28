@@ -8,6 +8,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string_view>
+#include <utility>
 
 #include "position.hpp"
 
@@ -31,8 +32,9 @@ constexpr uint64_t KING_MOVES_B2 = 0x70507ull;
 
 }  // namespace
 
-std::map<int, uint64_t> possibleMoves(const Position& p) {
-  std::map<int, uint64_t> legal;
+std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
+    const Position& p) {
+  std::map<std::pair<ColoredPiece, int>, uint64_t> legal;
 
   uint64_t active_pieces = 0ull;
   uint64_t opponent_pieces = 0ull;
@@ -342,7 +344,8 @@ std::map<int, uint64_t> possibleMoves(const Position& p) {
         }
 
         if (move_board != 0ull) {
-          legal[square] = move_board;
+          legal[std::make_pair(static_cast<ColoredPiece>(piece), square)] =
+              move_board;
         }
       }
       square++;
@@ -352,11 +355,45 @@ std::map<int, uint64_t> possibleMoves(const Position& p) {
   return legal;
 }
 
+std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
+    const Position& p) {
+  std::map<std::pair<ColoredPiece, int>, std::vector<int>> legal;
+
+  std::map<std::pair<ColoredPiece, int>, uint64_t> possible_move_boards =
+      possibleMoves(p);
+  for (const auto& [piece_and_square, move_board] : possible_move_boards) {
+    if (move_board != 0ull) {
+      std::vector<int> targets;
+      int move_square = 0;
+      uint64_t move_mask = 1ull;
+      while (move_square < 64) {
+        if ((move_board & move_mask) != 0ull) {
+          // Try the move (promotion type can't affect check).
+          Position tmpP = p.Duplicate();
+          moveInternal(&tmpP, piece_and_square.second, move_square, QUEEN);
+          // Don't add it if it results in being in check.
+          if (!isActiveColorInCheck(tmpP)) {
+            targets.push_back(move_square);
+          }
+        }
+        move_square++;
+        move_mask <<= 1;
+      }
+      if (!targets.empty()) {
+        legal[piece_and_square] = std::move(targets);
+      }
+    }
+  }
+
+  return legal;
+}
+
 nlohmann::json legalMovesJson(const Position& p) {
   nlohmann::json legal;
 
-  std::map<int, uint64_t> legal_move_boards = possibleMoves(p);
-  for (auto [square, move_board] : legal_move_boards) {
+  std::map<std::pair<ColoredPiece, int>, uint64_t> possible_move_boards =
+      possibleMoves(p);
+  for (const auto& [piece_and_square, move_board] : possible_move_boards) {
     if (move_board != 0ull) {
       nlohmann::json targets = nlohmann::json::array();
       int move_square = 0;
@@ -365,7 +402,7 @@ nlohmann::json legalMovesJson(const Position& p) {
         if ((move_board & move_mask) != 0ull) {
           // Try the move (promotion type can't affect check).
           Position tmpP = p.Duplicate();
-          moveInternal(&tmpP, square, move_square, QUEEN);
+          moveInternal(&tmpP, piece_and_square.second, move_square, QUEEN);
           // Don't add it if it results in being in check.
           if (!isActiveColorInCheck(tmpP)) {
             targets.push_back(algebraic(move_square));
@@ -375,7 +412,7 @@ nlohmann::json legalMovesJson(const Position& p) {
         move_mask <<= 1;
       }
       if (!targets.empty()) {
-        legal[algebraic(square)] = std::move(targets);
+        legal[algebraic(piece_and_square.second)] = std::move(targets);
       }
     }
   }
@@ -384,9 +421,10 @@ nlohmann::json legalMovesJson(const Position& p) {
 }
 
 bool isActiveColorInCheck(const Position& p) {
-  std::map<int, uint64_t> opponent_moves = possibleMoves(p.ForOpponent());
+  std::map<std::pair<ColoredPiece, int>, uint64_t> opponent_moves =
+      possibleMoves(p.ForOpponent());
   uint64_t king_board = p.bitboards[p.active_color == WHITE ? WKING : BKING];
-  for (auto [square, move_board] : opponent_moves) {
+  for (const auto& [square, move_board] : opponent_moves) {
     if ((king_board & move_board) != 0ull) {
       return true;
       break;
@@ -531,6 +569,90 @@ int move(Position* p, std::string_view move) {
     p->active_color = WHITE;
   }
   return 0;
+}
+
+int inverseAttackValue(int piece) {
+  switch (piece % 6) {
+    case KING:
+      return 1;
+    case QUEEN:
+      return 10;
+    case ROOK:
+      return 100;
+    case BISHOP:
+    case KNIGHT:
+      return 1000;
+    case PAWN:
+      return 10000;
+  }
+  return 0;  // unreachable
+}
+
+std::map<int, int> controlSquares(const Position& p) {
+  std::map<int, int> control_squares;
+
+  const std::map<std::pair<ColoredPiece, int>, uint64_t> active_moves =
+      possibleMoves(p);
+  const std::map<std::pair<ColoredPiece, int>, uint64_t> opponent_moves =
+      possibleMoves(p.ForOpponent());
+
+  uint64_t active_pieces = 0ull;
+  uint64_t opponent_pieces = 0ull;
+  for (int piece = 0; piece < 12; piece++) {
+    if ((p.active_color == WHITE && piece < 6) ||
+        (p.active_color == BLACK && piece >= 6)) {
+      active_pieces |= p.bitboards[piece];
+    } else {
+      opponent_pieces |= p.bitboards[piece];
+    }
+  }
+
+  int square = 0;
+  uint64_t mask = 1ull;
+  while (square < 64) {
+    std::map<std::pair<ColoredPiece, int>, uint64_t> temp_active_moves =
+        active_moves;
+    std::map<std::pair<ColoredPiece, int>, uint64_t> temp_opponent_moves =
+        opponent_moves;
+    if ((mask & active_pieces) == 0ull) {
+      // There's no piece on the square for the current player. Need to put one
+      // there so the opponent can attack it.
+      Position tempP = p.Duplicate();
+      tempP.bitboards[p.active_color == WHITE ? WPAWN : BPAWN] |= mask;
+      // Also make sure any piece there for the opponent is removed.
+      int starting_piece = p.active_color == WHITE ? 6 : 0;
+      for (int piece = starting_piece; piece < starting_piece + 6; piece++) {
+        tempP.bitboards[piece] &= ~mask;
+      }
+      temp_opponent_moves = possibleMoves(tempP.ForOpponent());
+    }
+    if ((mask & opponent_pieces) == 0ull) {
+      // There's no piece on the square for the opponent. Need to put one there
+      // so the current player can attack it.
+      Position tempP = p.Duplicate();
+      tempP.bitboards[p.active_color == WHITE ? BPAWN : WPAWN] |= mask;
+      // Also make sure any piece there for the current player is removed.
+      int starting_piece = p.active_color == WHITE ? 0 : 6;
+      for (int piece = starting_piece; piece < starting_piece + 6; piece++) {
+        tempP.bitboards[piece] &= ~mask;
+      }
+      temp_active_moves = possibleMoves(tempP);
+    }
+    for (const auto& [piece_and_square, move_board] : temp_active_moves) {
+      if ((move_board & mask) != 0ull) {
+        control_squares[square] += inverseAttackValue(piece_and_square.first);
+      }
+    }
+    for (const auto& [piece_and_square, move_board] : temp_opponent_moves) {
+      if ((move_board & mask) != 0ull) {
+        control_squares[square] -= inverseAttackValue(piece_and_square.first);
+      }
+    }
+    square++;
+    mask <<= 1;
+  }
+
+  return control_squares;
 }
 
 }  // namespace habits

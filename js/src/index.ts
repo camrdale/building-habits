@@ -5,12 +5,15 @@ if (!board) {
   throw new Error('Failed to find <chess-board>');
 }
 
+const startpos = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 function isCustomEvent(event: Event): event is CustomEvent {
   return 'detail' in event;
 }
 
 interface GameState {
   fen: string;
+  last_move: string;
   turn: string;
   legal: { [key: string]: string[] };
   in_check: boolean;
@@ -18,9 +21,9 @@ interface GameState {
   in_draw: boolean;
 }
 
-//board.setPosition(fen, false);
 let state: GameState = {
-  fen: new URLSearchParams(window.location.search).get('fen') || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  fen: new URLSearchParams(window.location.search).get('fen') || startpos,
+  last_move: '',
   turn: 'w',
   legal: {},
   in_check: false,
@@ -62,9 +65,9 @@ board.addEventListener('drag-start', (e: Event) => {
     return;
   }
 
-  // only pick up pieces for the side to move
+  // only pick up pieces for the white side when it is their turn to move
   if ((state.turn === 'w' && piece.search(/^b/) !== -1) ||
-    (state.turn === 'b' && piece.search(/^w/) !== -1)) {
+    (state.turn === 'b')) {
     e.preventDefault();
     return;
   }
@@ -118,6 +121,11 @@ board.addEventListener('drop', async (e: Event) => {
     setAction('snapback');
     return;
   }
+
+  if (state.turn === 'b' && !state.in_checkmate && !state.in_draw) {
+    // Make a move for black from the engine.
+    nextMove();
+  }
 });
 
 board.addEventListener('mouseover-square', (e) => {
@@ -151,6 +159,15 @@ board.addEventListener('mouseout-square', (_e: Event) => {
   removeGreySquares();
 });
 
+// update the board position after the piece snap
+// for castling, en passant, pawn promotion
+board.addEventListener('snap-end', (e: Event) => {
+  if (!isCustomEvent(e))
+    throw new Error('not a custom event');
+
+  board.setPosition(state.fen);
+});
+
 async function initializeBoard() {
   const params = new URLSearchParams({ fen: state.fen });
   try {
@@ -167,16 +184,36 @@ async function initializeBoard() {
   } catch (e) {
     console.log(e);
   }
+
+  if (state.turn === 'b' && !state.in_checkmate && !state.in_draw) {
+    // Make a move for black from the engine.
+    nextMove();
+  }
 }
 
-// update the board position after the piece snap
-// for castling, en passant, pawn promotion
-board.addEventListener('snap-end', (e: Event) => {
-  if (!isCustomEvent(e))
-    throw new Error('not a custom event');
+async function nextMove() {
+  const params = new URLSearchParams({ fen: state.fen });
+  try {
+    const response = await fetch('http://localhost:8080/engine/search' + '?' + params.toString());
+    if (response.status !== 200) {
+      console.log(response);
+      return;
+    }
+    const json = await response.json();
+    console.log(json);
+    state = json;
 
-  board.setPosition(state.fen);
-});
+    board!.setPosition(state.fen);
+    if (pgn != '') {
+      pgn += ' ';
+    }
+    pgn += state.last_move;
+    updateStatus();
+  } catch (e) {
+    console.log(e);
+    return;
+  }
+}
 
 function updateStatus() {
   let status = '';
@@ -203,7 +240,7 @@ function updateStatus() {
   }
 
   document.querySelector('#status')!.innerHTML = status;
-  document.querySelector('#fen')!.innerHTML = state.fen || '';
+  document.querySelector('#fen')!.innerHTML = state.fen;
   document.querySelector('#pgn')!.innerHTML = pgn;
 }
 
