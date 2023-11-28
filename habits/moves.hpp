@@ -46,6 +46,14 @@ bool isActiveColorInCheck(const Position& p);
 // more.
 std::map<int, int> controlSquares(const Position& p);
 
+// Determine who controls the squares on the board, in JSON format.
+// The keys are the squares of the board (squares that no piece can attack
+// are not present). The values are the difference in the inverse value of
+// attackers of the square for each side, positive meaning the active color has
+// more inverse value for attackers of the square, negative if the opponent has
+// more.
+nlohmann::json controlSquaresJson(const Position& p);
+
 // Calculated inverse value of the piece as an attacker.
 // Pawns are valued the most, Kings the least.
 int inverseAttackValue(int piece);

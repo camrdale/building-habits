@@ -16,22 +16,29 @@ interface GameState {
   last_move: string;
   turn: string;
   legal: { [key: string]: string[] };
+  control: { [key: string]: number };
   in_check: boolean;
   in_checkmate: boolean;
   in_draw: boolean;
 }
 
+const queryParams = new URLSearchParams(window.location.search);
+const showControl = queryParams.has('control');
+
 let state: GameState = {
-  fen: new URLSearchParams(window.location.search).get('fen') || startpos,
+  fen: queryParams.get('fen') || startpos,
   last_move: '',
   turn: 'w',
   legal: {},
+  control: {},
   in_check: false,
   in_checkmate: false,
   in_draw: false
 };
 let pgn = '';
 
+const controlStyles = document.createElement('style');
+document.head.append(controlStyles);
 const highlightStyles = document.createElement('style');
 document.head.append(highlightStyles);
 const whiteSquareGrey = '#a9a9a9';
@@ -108,14 +115,7 @@ board.addEventListener('drop', async (e: Event) => {
     }
     const json = await response.json();
     console.log(json);
-    state = json;
-
-    board.setPosition(state.fen);
-    if (pgn != '') {
-      pgn += ' ';
-    }
-    pgn += move;
-    updateStatus();
+    updateState(json);
   } catch (e) {
     console.log(e);
     setAction('snapback');
@@ -146,9 +146,6 @@ board.addEventListener('mouseover-square', (e) => {
     return;
   }
 
-  // highlight the square they moused over
-  greySquare(square);
-
   // highlight the possible squares for this piece
   for (const move of moves) {
     greySquare(move);
@@ -175,9 +172,7 @@ async function initializeBoard() {
     if (response.status === 200) {
       const json = await response.json();
       console.log(json);
-      state = json;
-      board!.setPosition(state.fen, false);
-      updateStatus();
+      updateState(json);
     } else {
       console.log(response);
     }
@@ -201,21 +196,42 @@ async function nextMove() {
     }
     const json = await response.json();
     console.log(json);
-    state = json;
-
-    board!.setPosition(state.fen);
-    if (pgn != '') {
-      pgn += ' ';
-    }
-    pgn += state.last_move;
-    updateStatus();
+    updateState(json);
   } catch (e) {
     console.log(e);
     return;
   }
 }
 
-function updateStatus() {
+function updateState(newState: GameState) {
+  state = newState;
+  board!.setPosition(state.fen, false);
+
+  controlStyles.textContent = '';
+  if (showControl) {
+    for (const [square, control] of Object.entries(state.control)) {
+      if (control == 0) { continue; }
+      let redColor = '255';
+      let blueColor = '0';
+      if (control > 0) {
+        redColor = '0';
+        blueColor = '255';
+      }
+      const opacity = (1.0 + Math.log10(Math.abs(control))) / 5.0;
+
+      controlStyles.textContent += `
+      chess-board::part(${square}) {
+        background-color: rgba(${redColor}, 0, ${blueColor}, ${opacity});
+      }
+    `;
+    }
+  }
+
+  if (pgn != '') {
+    pgn += ' ';
+  }
+  pgn += state.last_move;
+
   let status = '';
 
   let moveColor = 'White';

@@ -655,4 +655,12 @@ std::map<int, int> controlSquares(const Position& p) {
   return control_squares;
 }
 
+nlohmann::json controlSquaresJson(const Position& p) {
+  nlohmann::json control_squares;
+  for (auto [square, control] : controlSquares(p)) {
+    control_squares[algebraic(square)] = control;
+  }
+  return control_squares;
+}
+
 }  // namespace habits
