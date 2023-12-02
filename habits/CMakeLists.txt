@@ -3,6 +3,7 @@ add_library(habits
   moves.hpp moves.cpp
   search.hpp search.cpp
   http.hpp http.cpp
+  bot.hpp bot.cpp
 )
 
 include(GoogleTest)

@@ -39,5 +39,5 @@ sudo make install
 Install the dependencies needed for running:
 
 ```
-sudo apt install libfmt9
+sudo apt install libfmt9 libcurl4
 ```
