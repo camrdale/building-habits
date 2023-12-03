@@ -76,11 +76,11 @@ void LichessGame::startGame() {
   std::cout << "Game loop exiting" << std::endl;
 }
 
-void LichessGame::initializeState(const nlohmann::json &state_json) {
+void LichessGame::initializeState(const nlohmann::json &state) {
   position_ = Position::FromFen(initial_fen_);
-  status_ = state_json["status"];
+  status_ = state["status"].get<std::string>();
 
-  std::string initial_moves = state_json["moves"];
+  std::string initial_moves = state["moves"].get<std::string>();
   std::istringstream iss(initial_moves);
   std::string initial_move;
   moves_.clear();
@@ -97,9 +97,9 @@ void LichessGame::initializeState(const nlohmann::json &state_json) {
   }
 }
 
-void LichessGame::updateState(const nlohmann::json &state_json) {
-  status_ = state_json["status"];
-  std::string new_moves = state_json["moves"];
+void LichessGame::updateState(const nlohmann::json &state) {
+  status_ = state["status"].get<std::string>();
+  std::string new_moves = state["moves"].get<std::string>();
   std::istringstream iss(new_moves);
   std::string new_move;
   int currentMoveIndex = 0;
@@ -191,10 +191,10 @@ void LichessGame::receiveGameState(std::string data) {
     return;
   }
 
-  std::string type = json["type"];
+  std::string type = json["type"].get<std::string>();
   if (type.compare("gameFull") == 0) {
     std::cout << "Full game state: " << json << std::endl;
-    initial_fen_ = json["initialFen"];
+    initial_fen_ = json["initialFen"].get<std::string>();
     if (initial_fen_.compare("startpos") == 0) {
       initial_fen_ = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     }
@@ -253,11 +253,37 @@ void LichessBot::acceptChallenge(std::string challenge_id) {
   curl_easy_cleanup(curl);
 }
 
-void LichessBot::rejectChallenge(std::string challenge_id, std::string reason) {
+bool LichessBot::rejectChallenge(nlohmann::json challenge) {
+  std::string reason;
+  if (current_game_ != nullptr) {
+    reason = "later";
+  } else if (challenge["timeControl"]["type"].get<std::string>().compare(
+                 "clock") != 0) {
+    reason = "timeControl";
+  } else if (challenge["timeControl"]["limit"].get<int>() > 600) {
+    reason = "tooSlow";
+  } else if (challenge["timeControl"]["limit"].get<int>() < 180) {
+    reason = "tooFast";
+  } else if (challenge["variant"]["key"].get<std::string>().compare(
+                 "standard") != 0) {
+    reason = "standard";
+  } else if (!challenge["challenger"]["title"].is_null() &&
+             challenge["challenger"]["title"].get<std::string>().compare(
+                 "BOT") == 0) {
+    reason = "noBot";
+  }
+
+  if (reason.empty()) {
+    return false;
+  }
+
+  std::cout << "Rejecting a challenge with reason " << reason << ": "
+            << challenge << std::endl;
+  std::string challenge_id = challenge["id"].get<std::string>();
   CURL *curl = curl_easy_init();
   if (!curl) {
     std::cerr << "Failed to initialize CURL to reject challenge" << std::endl;
-    return;
+    return true;
   }
 
   CURLcode res;
@@ -278,9 +304,9 @@ void LichessBot::rejectChallenge(std::string challenge_id, std::string reason) {
   if (res != CURLE_OK) {
     std::cerr << "ERROR rejecting challenge " << curl_easy_strerror(res) << ": "
               << errbuf << std::endl;
-    return;
   }
   curl_easy_cleanup(curl);
+  return true;
 }
 
 int LichessBot::listenForChallenges() {
@@ -337,15 +363,13 @@ void LichessBot::receiveIncomingEvent(std::string data) {
     return;
   }
 
-  std::string type = json["type"];
+  std::string type = json["type"].get<std::string>();
   if (type.compare("challenge") == 0) {
-    if (current_game_ != nullptr) {
-      std::cout << "Already playing, rejecting a challenge: "
-                << json["challenge"] << std::endl;
-      rejectChallenge(json["challenge"]["id"], "later");
+    if (rejectChallenge(json["challenge"])) {
+      return;
     }
     std::cout << "Accepting challenge: " << json["challenge"] << std::endl;
-    acceptChallenge(json["challenge"]["id"]);
+    acceptChallenge(json["challenge"]["id"].get<std::string>());
     return;
   }
   if (type.compare("challengeCanceled") == 0) {
@@ -359,7 +383,8 @@ void LichessBot::receiveIncomingEvent(std::string data) {
   if (type.compare("gameStart") == 0) {
     std::cout << "Game started: " << json["game"] << std::endl;
     if (current_game_ != nullptr) {
-      if (current_game_->getGameId().compare(json["game"]["gameId"]) == 0) {
+      if (current_game_->getGameId().compare(
+              json["game"]["gameId"].get<std::string>()) == 0) {
         std::cerr << "Received gameStart for already started game: "
                   << json["game"] << std::endl;
         return;
@@ -369,15 +394,15 @@ void LichessBot::receiveIncomingEvent(std::string data) {
                 << std::endl;
       return;
     }
-    current_game_ = std::make_unique<LichessGame>(
-        json["game"]["gameId"], json["game"]["color"], token_);
+    current_game_ = std::make_unique<LichessGame>(json["game"], token_);
     current_game_thread_ = std::make_unique<std::thread>(
         &LichessGame::startGame, current_game_.get());
     return;
   }
   if (type.compare("gameFinish") == 0) {
     if (current_game_ != nullptr &&
-        current_game_->getGameId().compare(json["game"]["gameId"]) == 0) {
+        current_game_->getGameId().compare(
+            json["game"]["gameId"].get<std::string>()) == 0) {
       std::cout << "Waiting for game thread to exit: " << json["game"]
                 << std::endl;
       current_game_thread_->join();

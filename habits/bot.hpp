@@ -12,9 +12,10 @@ namespace habits {
 
 class LichessGame {
  public:
-  explicit LichessGame(std::string game_id, std::string color,
-                       std::string token)
-      : game_id_(game_id), color_(color[0]), token_(token) {}
+  explicit LichessGame(const nlohmann::json& game, std::string token)
+      : game_id_(game["gameId"].get<std::string>()),
+        color_(game["color"].get<std::string>()[0]),
+        token_(token) {}
 
   void startGame();
 
@@ -23,8 +24,8 @@ class LichessGame {
   void receiveGameState(std::string data);
 
  private:
-  void initializeState(const nlohmann::json& state_json);
-  void updateState(const nlohmann::json& state_json);
+  void initializeState(const nlohmann::json& state);
+  void updateState(const nlohmann::json& state);
   bool myTurn() const;
   void makeBestMove();
 
@@ -51,7 +52,7 @@ class LichessBot {
 
  private:
   void acceptChallenge(std::string challenge_id);
-  void rejectChallenge(std::string challenge_id, std::string reason);
+  bool rejectChallenge(nlohmann::json challenge);
 
   std::string token_;
 
