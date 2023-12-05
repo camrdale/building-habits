@@ -1,5 +1,6 @@
 #include "moves.hpp"
 
+#include <algorithm>
 #include <bitset>
 #include <cmath>
 #include <cstdint>
@@ -379,6 +380,10 @@ std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
         move_square++;
         move_mask <<= 1;
       }
+      if (p.active_color == BLACK) {
+        // Move square list should be sorted from nearest to furthest.
+        std::reverse(targets.begin(), targets.end());
+      }
       if (!targets.empty()) {
         legal[piece_and_square] = std::move(targets);
       }
@@ -571,25 +576,26 @@ int move(Position* p, std::string_view move) {
   return 0;
 }
 
-int inverseAttackValue(int piece) {
+int pieceValue(int piece) {
   switch (piece % 6) {
-    case KING:
-      return 1;
-    case QUEEN:
-      return 10;
-    case ROOK:
-      return 100;
-    case BISHOP:
-    case KNIGHT:
-      return 1000;
     case PAWN:
-      return 10000;
+      return 1;
+    case KNIGHT:
+      return 3;
+    case BISHOP:
+      return 3;
+    case ROOK:
+      return 5;
+    case QUEEN:
+      return 9;
+    case KING:
+      return 10;
   }
-  return 0;  // unreachable
+  return 0;
 }
 
-std::map<int, int> controlSquares(const Position& p) {
-  std::map<int, int> control_squares;
+std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
+  std::map<int, std::pair<int, int>> control_squares;
 
   const std::map<std::pair<ColoredPiece, int>, uint64_t> active_moves =
       possibleMoves(p);
@@ -638,16 +644,47 @@ std::map<int, int> controlSquares(const Position& p) {
       }
       temp_active_moves = possibleMoves(tempP);
     }
+    int defenders = 0;
+    int min_defender_value = pieceValue(WKING);
     for (const auto& [piece_and_square, move_board] : temp_active_moves) {
       if ((move_board & mask) != 0ull) {
-        control_squares[square] += inverseAttackValue(piece_and_square.first);
+        defenders++;
+        min_defender_value =
+            std::min(min_defender_value, pieceValue(piece_and_square.first));
       }
     }
+    int attackers = 0;
+    int min_attacker_value = pieceValue(WKING);
     for (const auto& [piece_and_square, move_board] : temp_opponent_moves) {
       if ((move_board & mask) != 0ull) {
-        control_squares[square] -= inverseAttackValue(piece_and_square.first);
+        attackers++;
+        min_attacker_value =
+            std::min(min_attacker_value, pieceValue(piece_and_square.first));
       }
     }
+
+    if (attackers != 0 || defenders != 0) {
+      bool defended = defenders - attackers >= 0;
+      int min_defended_piece =
+          defended ? min_attacker_value : -min_defender_value;
+      if (!defended && min_defender_value < min_attacker_value) {
+        min_defended_piece = min_defender_value;
+      }
+      // if (defended && min_attacker_value < min_defender_value) {
+      //   min_defended_piece = -min_attacker_value;
+      // }
+
+      bool can_move = defenders - attackers >= 1;
+      int min_move_piece = can_move ? min_attacker_value : -min_defender_value;
+      if (!can_move && defenders - attackers == 0 &&
+          min_defender_value != pieceValue(PAWN)) {
+        min_move_piece = pieceValue(PAWN);
+      }
+
+      control_squares[square] =
+          std::make_pair(min_defended_piece, min_move_piece);
+    }
+
     square++;
     mask <<= 1;
   }
@@ -658,7 +695,7 @@ std::map<int, int> controlSquares(const Position& p) {
 nlohmann::json controlSquaresJson(const Position& p) {
   nlohmann::json control_squares;
   for (auto [square, control] : controlSquares(p)) {
-    control_squares[algebraic(square)] = control;
+    control_squares[algebraic(square)] = control.first;
   }
   return control_squares;
 }

@@ -217,7 +217,7 @@ function updateState(newState: GameState) {
         redColor = '0';
         blueColor = '255';
       }
-      const opacity = (1.0 + Math.log10(Math.abs(control))) / 5.0;
+      const opacity = Math.abs(control) / 10.0;
 
       controlStyles.textContent += `
       chess-board::part(${square}) {

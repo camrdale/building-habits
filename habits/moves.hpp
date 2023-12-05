@@ -40,22 +40,22 @@ bool isActiveColorInCheck(const Position& p);
 
 // Determine who controls the squares on the board.
 // The map's keys are the squares of the board (squares that no piece can attack
-// are not present). The values are the difference in the inverse value of
-// attackers of the square for each side, positive meaning the active color has
-// more inverse value for attackers of the square, negative if the opponent has
-// more.
-std::map<int, int> controlSquares(const Position& p);
+// are not present). The values are a pair, with the first value being the most
+// valuable piece that the controller can have on the square safely, positive
+// meaning the active color controls the square, negative if the opponent
+// controls it. The second value is the most valuable piece that the controller
+// can move to the square safely.
+std::map<int, std::pair<int, int>> controlSquares(const Position& p);
 
 // Determine who controls the squares on the board, in JSON format.
 // The keys are the squares of the board (squares that no piece can attack
-// are not present). The values are the difference in the inverse value of
-// attackers of the square for each side, positive meaning the active color has
-// more inverse value for attackers of the square, negative if the opponent has
-// more.
+// are not present). The values are the most valuable piece that the controller
+// can have on the square safely, positive meaning the active color controls
+// the square, negative if the opponent controls it.
 nlohmann::json controlSquaresJson(const Position& p);
 
-// Calculated inverse value of the piece as an attacker.
-// Pawns are valued the most, Kings the least.
-int inverseAttackValue(int piece);
+// Calculated value of the piece, for control squares.
+// Kings are valued the most, Pawns the least.
+int pieceValue(int piece);
 
 }  // namespace habits
