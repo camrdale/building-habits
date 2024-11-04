@@ -9,7 +9,7 @@
 - curl
 - nodejs
 
-Also see the Node module dependencies in the js/ folder.
+Also see the Node module dependencies in the [js/](js/) folder.
 
 
 ## Building
@@ -97,7 +97,7 @@ the `build` directory):
 
 ## Releasing
 
-Before releasing, consider updating the version at the top of
+Before releasing, consider updating the project version at the top of
 [CMakeLists.txt](CMakeLists.txt).
 
 Create the release package file from the build directory:
