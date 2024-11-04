@@ -40,7 +40,7 @@ Generate the build files and build the binary from the `build` directory:
 cd build/
 cmake ..
 cmake --build .
-``
+```
 
 ## Testing
 
@@ -107,7 +107,7 @@ cd build/
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 cpack
-``
+```
 
 The generated file `BuildingHabits-<version>-Linux-binary.tar.gz` can be
 transferred to another computer and run (the dependencies are still needed):
