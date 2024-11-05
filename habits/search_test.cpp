@@ -79,5 +79,16 @@ TEST(SearchTest, AttackKnightsBishopsOnB4B5G4G5) {
       "d8g5");
 }
 
+TEST(SearchTest, CastleAsSoonAsPossible) {
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")),
+      "e1g1");
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQ2KR b KQkq - 0 1")),
+      "e8g8");
+}
+
 }  // namespace
 }  // namespace habits

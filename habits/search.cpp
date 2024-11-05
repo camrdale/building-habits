@@ -28,11 +28,11 @@ const std::vector<
 
 const std::vector<
     std::pair<PieceOnSquare, std::vector<Square>>>
-    developing_moves_white = {{{WPAWN, "e2"}, {{"e4"}, {"e3"}}},
+    developing_moves_white = {{{WKING, "e1"}, {{"g1"}, {"c1"}}},
+                              {{WPAWN, "e2"}, {{"e4"}, {"e3"}}},
                               {{WKNIGHT, "g1"}, {{"f3"}, {"e2"}}},
                               {{WKNIGHT, "b1"}, {{"c3"}, {"d2"}}},
                               {{WBISHOP, "f1"}, {{"c4"}, {"e2"}, {"b5"}}},
-                              {{WKING, "e1"}, {{"g1"}, {"c1"}}},
                               {{WPAWN, "d2"}, {{"d3"}, {"d4"}}},
                               {{WBISHOP, "c1"}, {{"e3"}, {"f4"}, {"d2"}, {"g5"}}},
                               {{WQUEEN, "d1"}, {{"d2"}, {"e2"}}},
@@ -42,11 +42,11 @@ const std::vector<
 
 const std::vector<
     std::pair<PieceOnSquare, std::vector<Square>>>
-    developing_moves_black = {{{BPAWN, "e7"}, {{"e5"}, {"e6"}}},
+    developing_moves_black = {{{BKING, "e8"}, {{"g8"}, {"c8"}}},
+                              {{BPAWN, "e7"}, {{"e5"}, {"e6"}}},
                               {{BKNIGHT, "b8"}, {{"c6"}, {"d7"}}},
                               {{BKNIGHT, "g8"}, {{"f6"}, {"e7"}}},
                               {{BBISHOP, "f8"}, {{"c5"}, {"e7"}, {"b4"}}},
-                              {{BKING, "e8"}, {{"g8"}, {"c8"}}},
                               {{BPAWN, "d7"}, {{"d6"}, {"d5"}}},
                               {{BBISHOP, "c8"}, {{"e6"}, {"f5"}, {"d7"}, {"g4"}}},
                               {{BQUEEN, "d8"}, {{"d7"}, {"e7"}}},
