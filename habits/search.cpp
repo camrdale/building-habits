@@ -19,15 +19,15 @@ namespace habits {
 namespace {
 
 const std::vector<
-    std::pair<std::pair<ColoredPiece, std::string>, std::vector<std::string>>>
+    std::pair<PieceOnSquare, std::vector<std::string>>>
     initial_moves_white = {{{WPAWN, "e2"}, {"e4"}}, {{WPAWN, "d2"}, {"d4"}}};
 
 const std::vector<
-    std::pair<std::pair<ColoredPiece, std::string>, std::vector<std::string>>>
+    std::pair<PieceOnSquare, std::vector<std::string>>>
     initial_moves_black = {{{BPAWN, "e7"}, {"e5"}}, {{BPAWN, "d7"}, {"d5"}}};
 
 const std::vector<
-    std::pair<std::pair<ColoredPiece, std::string>, std::vector<std::string>>>
+    std::pair<PieceOnSquare, std::vector<std::string>>>
     developing_moves_white = {{{WPAWN, "e2"}, {"e4", "e3"}},
                               {{WKNIGHT, "g1"}, {"f3", "e2"}},
                               {{WKNIGHT, "b1"}, {"c3", "d2"}},
@@ -41,7 +41,7 @@ const std::vector<
                               {{WPAWN, "h2"}, {"h3"}}};
 
 const std::vector<
-    std::pair<std::pair<ColoredPiece, std::string>, std::vector<std::string>>>
+    std::pair<PieceOnSquare, std::vector<std::string>>>
     developing_moves_black = {{{BPAWN, "e7"}, {"e5", "e6"}},
                               {{BKNIGHT, "b8"}, {"c6", "d7"}},
                               {{BKNIGHT, "g8"}, {"f6", "e7"}},
@@ -58,11 +58,11 @@ std::string searchPresetMoves(
     const Position& p,
     const std::map<PieceOnSquare, std::vector<int>>& legal_moves,
     std::map<int, std::pair<int, int>>& control_squares,
-    const std::vector<std::pair<std::pair<ColoredPiece, std::string>,
+    const std::vector<std::pair<PieceOnSquare,
                                 std::vector<std::string>>>& preset_moves) {
   for (const auto& [piece_and_square, tos] : preset_moves) {
     auto legal_moves_from = legal_moves.find(PieceOnSquare(
-        piece_and_square.first, parseAlgebraic(piece_and_square.second)));
+        piece_and_square.piece, piece_and_square.square));
     if (legal_moves_from != legal_moves.end()) {
       const std::vector<int>& legal_moves_to = legal_moves_from->second;
       for (const std::string& to : tos) {
@@ -74,11 +74,11 @@ std::string searchPresetMoves(
           bool controlled = control_squares.count(to_square) > 0;
           int control =
               controlled ? control_squares[to_square].second : pieceValue(KING);
-          if (control >= pieceValue(piece_and_square.first)) {
-            std::cout << "Found preset move of " << piece_and_square.first
-                      << " from " << piece_and_square.second << " to " << to
+          if (control >= pieceValue(piece_and_square.piece)) {
+            std::cout << "Found preset move of " << piece_and_square.piece
+                      << " from " << piece_and_square.square << " to " << to
                       << " control value " << control << std::endl;
-            return piece_and_square.second + to;
+            return algebraic(piece_and_square.square) + to;
           }
         }
       }

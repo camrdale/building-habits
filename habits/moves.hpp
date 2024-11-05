@@ -18,6 +18,11 @@ struct PieceOnSquare {
     this->square = square;
   }
 
+  PieceOnSquare(ColoredPiece piece, std::string algebraic_square) {
+    this->piece = piece;
+    this->square = parseAlgebraic(algebraic_square);
+  }
+
   // Custom comparison operator for std::map.
   bool operator<(const PieceOnSquare& other) const {
       if (piece != other.piece) {
