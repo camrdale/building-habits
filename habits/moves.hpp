@@ -8,15 +8,40 @@
 
 namespace habits {
 
+// A piece and its current position on a square on the board.
+struct PieceOnSquare {
+  ColoredPiece piece;
+  int square;
+
+  PieceOnSquare(ColoredPiece piece, int square) {
+    this->piece = piece;
+    this->square = square;
+  }
+
+  // Custom comparison operator for std::map.
+  bool operator<(const PieceOnSquare& other) const {
+      if (piece != other.piece) {
+        return piece < other.piece;
+      } else {
+        return square < other.square;
+      }
+  }
+
+  // Equals operator needed for std::find.
+  bool operator==(const PieceOnSquare& other) {
+    return (this->piece == other.piece) && (this->square == other.square);
+  }
+};
+
 // Determine the possible moves for the active color in the Position.
 // Possible moves have not been verified to not result in check, so they may not
 // be legal. The map's keys are the pieces and their current squares for the
 // active color, the values are a bitboard of all the possible moves for the
 // piece on that square. Pieces with no possible moves will not be present.
-std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
+std::map<PieceOnSquare, uint64_t> possibleMoves(
     const Position& p);
 
-std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
+std::map<PieceOnSquare, std::vector<int>> legalMoves(
     const Position& p);
 
 // Determine the legal moves for the active color in the Position.

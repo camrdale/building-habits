@@ -33,9 +33,9 @@ constexpr uint64_t KING_MOVES_B2 = 0x70507ull;
 
 }  // namespace
 
-std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
+std::map<PieceOnSquare, uint64_t> possibleMoves(
     const Position& p) {
-  std::map<std::pair<ColoredPiece, int>, uint64_t> legal;
+  std::map<PieceOnSquare, uint64_t> legal;
 
   uint64_t active_pieces = 0ull;
   uint64_t opponent_pieces = 0ull;
@@ -345,7 +345,7 @@ std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
         }
 
         if (move_board != 0ull) {
-          legal[std::make_pair(static_cast<ColoredPiece>(piece), square)] =
+          legal[PieceOnSquare(static_cast<ColoredPiece>(piece), square)] =
               move_board;
         }
       }
@@ -356,11 +356,11 @@ std::map<std::pair<ColoredPiece, int>, uint64_t> possibleMoves(
   return legal;
 }
 
-std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
+std::map<PieceOnSquare, std::vector<int>> legalMoves(
     const Position& p) {
-  std::map<std::pair<ColoredPiece, int>, std::vector<int>> legal;
+  std::map<PieceOnSquare, std::vector<int>> legal;
 
-  std::map<std::pair<ColoredPiece, int>, uint64_t> possible_move_boards =
+  std::map<PieceOnSquare, uint64_t> possible_move_boards =
       possibleMoves(p);
   for (const auto& [piece_and_square, move_board] : possible_move_boards) {
     if (move_board != 0ull) {
@@ -371,7 +371,7 @@ std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
         if ((move_board & move_mask) != 0ull) {
           // Try the move (promotion type can't affect check).
           Position tmpP = p.Duplicate();
-          moveInternal(&tmpP, piece_and_square.second, move_square, QUEEN);
+          moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
           // Don't add it if it results in being in check.
           if (!isActiveColorInCheck(tmpP)) {
             targets.push_back(move_square);
@@ -396,7 +396,7 @@ std::map<std::pair<ColoredPiece, int>, std::vector<int>> legalMoves(
 nlohmann::json legalMovesJson(const Position& p) {
   nlohmann::json legal;
 
-  std::map<std::pair<ColoredPiece, int>, uint64_t> possible_move_boards =
+  std::map<PieceOnSquare, uint64_t> possible_move_boards =
       possibleMoves(p);
   for (const auto& [piece_and_square, move_board] : possible_move_boards) {
     if (move_board != 0ull) {
@@ -407,7 +407,7 @@ nlohmann::json legalMovesJson(const Position& p) {
         if ((move_board & move_mask) != 0ull) {
           // Try the move (promotion type can't affect check).
           Position tmpP = p.Duplicate();
-          moveInternal(&tmpP, piece_and_square.second, move_square, QUEEN);
+          moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
           // Don't add it if it results in being in check.
           if (!isActiveColorInCheck(tmpP)) {
             targets.push_back(algebraic(move_square));
@@ -417,7 +417,7 @@ nlohmann::json legalMovesJson(const Position& p) {
         move_mask <<= 1;
       }
       if (!targets.empty()) {
-        legal[algebraic(piece_and_square.second)] = std::move(targets);
+        legal[algebraic(piece_and_square.square)] = std::move(targets);
       }
     }
   }
@@ -426,7 +426,7 @@ nlohmann::json legalMovesJson(const Position& p) {
 }
 
 bool isActiveColorInCheck(const Position& p) {
-  std::map<std::pair<ColoredPiece, int>, uint64_t> opponent_moves =
+  std::map<PieceOnSquare, uint64_t> opponent_moves =
       possibleMoves(p.ForOpponent());
   uint64_t king_board = p.bitboards[p.active_color == WHITE ? WKING : BKING];
   for (const auto& [square, move_board] : opponent_moves) {
@@ -597,9 +597,9 @@ int pieceValue(int piece) {
 std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
   std::map<int, std::pair<int, int>> control_squares;
 
-  const std::map<std::pair<ColoredPiece, int>, uint64_t> active_moves =
+  const std::map<PieceOnSquare, uint64_t> active_moves =
       possibleMoves(p);
-  const std::map<std::pair<ColoredPiece, int>, uint64_t> opponent_moves =
+  const std::map<PieceOnSquare, uint64_t> opponent_moves =
       possibleMoves(p.ForOpponent());
 
   uint64_t active_pieces = 0ull;
@@ -616,9 +616,9 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
   int square = 0;
   uint64_t mask = 1ull;
   while (square < 64) {
-    std::map<std::pair<ColoredPiece, int>, uint64_t> temp_active_moves =
+    std::map<PieceOnSquare, uint64_t> temp_active_moves =
         active_moves;
-    std::map<std::pair<ColoredPiece, int>, uint64_t> temp_opponent_moves =
+    std::map<PieceOnSquare, uint64_t> temp_opponent_moves =
         opponent_moves;
     if ((mask & active_pieces) == 0ull) {
       // There's no piece on the square for the current player. Need to put one
@@ -650,7 +650,7 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
       if ((move_board & mask) != 0ull) {
         defenders++;
         min_defender_value =
-            std::min(min_defender_value, pieceValue(piece_and_square.first));
+            std::min(min_defender_value, pieceValue(piece_and_square.piece));
       }
     }
     int attackers = 0;
@@ -659,7 +659,7 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
       if ((move_board & mask) != 0ull) {
         attackers++;
         min_attacker_value =
-            std::min(min_attacker_value, pieceValue(piece_and_square.first));
+            std::min(min_attacker_value, pieceValue(piece_and_square.piece));
       }
     }
 

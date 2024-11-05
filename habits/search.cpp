@@ -56,12 +56,12 @@ const std::vector<
 
 std::string searchPresetMoves(
     const Position& p,
-    const std::map<std::pair<ColoredPiece, int>, std::vector<int>>& legal_moves,
+    const std::map<PieceOnSquare, std::vector<int>>& legal_moves,
     std::map<int, std::pair<int, int>>& control_squares,
     const std::vector<std::pair<std::pair<ColoredPiece, std::string>,
                                 std::vector<std::string>>>& preset_moves) {
   for (const auto& [piece_and_square, tos] : preset_moves) {
-    auto legal_moves_from = legal_moves.find(std::make_pair(
+    auto legal_moves_from = legal_moves.find(PieceOnSquare(
         piece_and_square.first, parseAlgebraic(piece_and_square.second)));
     if (legal_moves_from != legal_moves.end()) {
       const std::vector<int>& legal_moves_to = legal_moves_from->second;
@@ -104,22 +104,22 @@ int getOpponentPieceValue(const Position& p, int move_square) {
 
 std::string Game::bestMove(const Position& p) {
   // Know how all the pieces move.
-  std::map<std::pair<ColoredPiece, int>, std::vector<int>> legal_moves =
+  std::map<PieceOnSquare, std::vector<int>> legal_moves =
       legalMoves(p);
-  std::vector<std::pair<std::pair<ColoredPiece, int>, std::vector<int>>>
+  std::vector<std::pair<PieceOnSquare, std::vector<int>>>
       sorted_legal_moves(legal_moves.begin(), legal_moves.end());
   // Sort so highest value pieces furthest away are considered first.
   std::sort(
       sorted_legal_moves.begin(), sorted_legal_moves.end(),
-      [p](std::pair<std::pair<ColoredPiece, int>, std::vector<int>> left,
-          std::pair<std::pair<ColoredPiece, int>, std::vector<int>> right) {
-        if (left.first.first != right.first.first) {
-          return left.first.first > right.first.first;
+      [p](std::pair<PieceOnSquare, std::vector<int>> left,
+          std::pair<PieceOnSquare, std::vector<int>> right) {
+        if (left.first.piece != right.first.piece) {
+          return left.first.piece > right.first.piece;
         }
         if (p.active_color == WHITE) {
-          return left.first.second > right.first.second;
+          return left.first.square > right.first.square;
         }
-        return left.first.second < right.first.second;
+        return left.first.square < right.first.square;
       });
 
   std::string bestmove;
@@ -128,9 +128,9 @@ std::string Game::bestMove(const Position& p) {
 
   // 1. Don't hang free pieces.
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
-    bool controlled = control_squares.count(piece_and_square.second) > 0;
-    if (controlled && control_squares[piece_and_square.second].first <
-                          pieceValue(piece_and_square.first)) {
+    bool controlled = control_squares.count(piece_and_square.square) > 0;
+    if (controlled && control_squares[piece_and_square.square].first <
+                          pieceValue(piece_and_square.piece)) {
       int max_control = -1;
       int max_control_square = -1;
       int max_opponent_piece_value = 0;
@@ -140,7 +140,7 @@ std::string Game::bestMove(const Position& p) {
         bool move_controlled = control_squares.count(move_square) > 0;
         int control = move_controlled ? control_squares[move_square].second
                                       : pieceValue(KING);
-        if (control >= pieceValue(piece_and_square.first) &&
+        if (control >= pieceValue(piece_and_square.piece) &&
             control > max_control) {
           max_control = control;
           max_control_square = move_square;
@@ -153,39 +153,39 @@ std::string Game::bestMove(const Position& p) {
           max_opponent_piece_value_square_control = control;
         }
       }
-      if (max_opponent_piece_value >= pieceValue(piece_and_square.first) ||
+      if (max_opponent_piece_value >= pieceValue(piece_and_square.piece) ||
           (max_opponent_piece_value_square_control >=
-           pieceValue(piece_and_square.first))) {
-        std::cout << "Moving attacked piece " << piece_and_square.first
-                  << " from " << piece_and_square.second
+           pieceValue(piece_and_square.piece))) {
+        std::cout << "Moving attacked piece " << piece_and_square.piece
+                  << " from " << piece_and_square.square
                   << " to take piece of value " << max_opponent_piece_value
                   << " on square " << max_opponent_piece_value_square
                   << " (control value "
                   << max_opponent_piece_value_square_control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.second) +
+        return algebraic(piece_and_square.square) +
                algebraic(max_opponent_piece_value_square);
       }
       if (max_control_square >= 0) {
-        std::cout << "Moving attacked piece " << piece_and_square.first
-                  << " from " << piece_and_square.second << " (control value "
+        std::cout << "Moving attacked piece " << piece_and_square.piece
+                  << " from " << piece_and_square.square << " (control value "
                   << (controlled
-                          ? control_squares[piece_and_square.second].first
+                          ? control_squares[piece_and_square.square].first
                           : 0)
                   << ") to " << max_control_square << " (control value "
                   << max_control << ")" << std::endl;
-        return algebraic(piece_and_square.second) +
+        return algebraic(piece_and_square.square) +
                algebraic(max_control_square);
       }
       if (max_opponent_piece_value > 0) {
-        std::cout << "Sacking attacked piece " << piece_and_square.first
-                  << " from " << piece_and_square.second
+        std::cout << "Sacking attacked piece " << piece_and_square.piece
+                  << " from " << piece_and_square.square
                   << " to take piece of value " << max_opponent_piece_value
                   << " on square " << max_opponent_piece_value_square
                   << " (control value "
                   << max_opponent_piece_value_square_control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.second) +
+        return algebraic(piece_and_square.square) +
                algebraic(max_opponent_piece_value_square);
       }
     }
@@ -195,23 +195,23 @@ std::string Game::bestMove(const Position& p) {
   // 2. Take free pieces (pawns are not pieces).
   // Reverse sort so we attack with the lowest value pieces first.
   std::reverse(sorted_legal_moves.begin(), sorted_legal_moves.end());
-  std::vector<std::pair<std::pair<ColoredPiece, int>, int>> trades;
+  std::vector<std::pair<PieceOnSquare, int>> trades;
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
     for (int move_square : move_squares) {
       int opponent_piece_value = getOpponentPieceValue(p, move_square);
       bool controlled = control_squares.count(move_square) > 0;
       int control =
           controlled ? control_squares[move_square].second : pieceValue(KING);
-      if (opponent_piece_value > pieceValue(piece_and_square.first) ||
+      if (opponent_piece_value > pieceValue(piece_and_square.piece) ||
           (opponent_piece_value > 0 &&
-           control >= pieceValue(piece_and_square.first))) {
-        std::cout << "Taking free piece with " << piece_and_square.first
-                  << " from " << piece_and_square.second << " to "
+           control >= pieceValue(piece_and_square.piece))) {
+        std::cout << "Taking free piece with " << piece_and_square.piece
+                  << " from " << piece_and_square.square << " to "
                   << move_square << " (control value " << control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.second) + algebraic(move_square);
+        return algebraic(piece_and_square.square) + algebraic(move_square);
       }
-      if (opponent_piece_value == pieceValue(piece_and_square.first)) {
+      if (opponent_piece_value == pieceValue(piece_and_square.piece)) {
         trades.emplace_back(std::make_pair(piece_and_square, move_square));
       }
     }
@@ -233,9 +233,9 @@ std::string Game::bestMove(const Position& p) {
   if (!trades.empty()) {
     // Trade the highest value piece first.
     auto& [piece_and_square, move_square] = trades[trades.size() - 1];
-    std::cout << "Trading pieces with " << piece_and_square.first << " from "
-              << piece_and_square.second << " to " << move_square << std::endl;
-    return algebraic(piece_and_square.second) + algebraic(move_square);
+    std::cout << "Trading pieces with " << piece_and_square.piece << " from "
+              << piece_and_square.square << " to " << move_square << std::endl;
+    return algebraic(piece_and_square.square) + algebraic(move_square);
   }
 
   // 4. Always attack a Bishop or Knight on g4/g5 b4/b5 with the a or h pawn
@@ -277,14 +277,14 @@ std::string Game::bestMove(const Position& p) {
   // Nothing else? make a random move.
   auto it = legal_moves.begin();
   std::advance(it, rand() % legal_moves.size());
-  std::pair<ColoredPiece, int> from = it->first;
+  PieceOnSquare from = it->first;
   std::vector<int> tos = it->second;
   auto it2 = tos.begin();
   std::advance(it2, rand() % tos.size());
   int to = *it2;
-  std::cout << "Randomly moving " << from.first << " from " << from.second
+  std::cout << "Randomly moving " << from.piece << " from " << from.square
             << " to " << to << std::endl;
-  return algebraic(from.second) + algebraic(to);
+  return algebraic(from.square) + algebraic(to);
 }
 
 }  // namespace habits
