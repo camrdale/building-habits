@@ -194,6 +194,16 @@ std::string Game::bestMove(const Position& p) {
     }
   }
 
+  // 3. Capture pieces of equal or greater value whenever possible (pawns are
+  // not pieces). 3a. Capture towards the center with pawns.
+  if (!trades.empty()) {
+    // Trade the highest value piece first.
+    auto& [piece_and_square, move_square] = trades[trades.size() - 1];
+    std::cout << "Trading pieces with " << piece_and_square.piece << " from "
+              << piece_and_square.square << " to " << move_square << std::endl;
+    return piece_and_square.square.Algebraic() + move_square.Algebraic();
+  }
+
   // 4. Always attack a Bishop or Knight on g4/g5 b4/b5 with the a or h pawn
   // immediately.
   if (((p.bitboards[BBISHOP] | p.bitboards[BKNIGHT]) & Square("b4").BitboardMask()) != 0ull
@@ -222,16 +232,6 @@ std::string Game::bestMove(const Position& p) {
     } else {
       return bestmove;
     }
-  }
-
-  // 3. Capture pieces of equal or greater value whenever possible (pawns are
-  // not pieces). 3a. Capture towards the center with pawns.
-  if (!trades.empty()) {
-    // Trade the highest value piece first.
-    auto& [piece_and_square, move_square] = trades[trades.size() - 1];
-    std::cout << "Trading pieces with " << piece_and_square.piece << " from "
-              << piece_and_square.square << " to " << move_square << std::endl;
-    return piece_and_square.square.Algebraic() + move_square.Algebraic();
   }
 
   // 5. Castle as soon as possible.
