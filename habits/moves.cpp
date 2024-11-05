@@ -354,10 +354,7 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
   return legal;
 }
 
-std::map<PieceOnSquare, std::vector<Square>> legalMoves(
-    const Position& p) {
-  std::map<PieceOnSquare, std::vector<Square>> legal;
-
+LegalMoves::LegalMoves(const Position& p) : active_color_(p.active_color) {
   std::map<PieceOnSquare, uint64_t> possible_move_boards =
       possibleMoves(p);
   for (const auto& [piece_and_square, move_board] : possible_move_boards) {
@@ -381,12 +378,58 @@ std::map<PieceOnSquare, std::vector<Square>> legalMoves(
         std::reverse(targets.begin(), targets.end());
       }
       if (!targets.empty()) {
-        legal[piece_and_square] = std::move(targets);
+        legal_moves_[piece_and_square] = std::move(targets);
       }
     }
   }
+}
 
-  return legal;
+std::vector<PieceMoves> LegalMoves::Sorted() const {
+  std::vector<PieceMoves> sorted_legal_moves;
+  for (const auto& [piece_on_square, moves] : legal_moves_) {
+    sorted_legal_moves.push_back(PieceMoves(piece_on_square, moves));
+  }
+  // Sort so highest value pieces furthest away are considered first.
+  std::sort(
+      sorted_legal_moves.begin(), sorted_legal_moves.end(),
+      [this](PieceMoves left, PieceMoves right) {
+        if (left.piece_on_square.piece != right.piece_on_square.piece) {
+          return left.piece_on_square.piece > right.piece_on_square.piece;
+        }
+        if (active_color_ == WHITE) {
+          return right.piece_on_square.square < left.piece_on_square.square;
+        }
+        return left.piece_on_square.square < right.piece_on_square.square;
+      });
+  return sorted_legal_moves;
+}
+
+bool LegalMoves::IsLegal(PieceOnSquare piece_on_square, Square to_square) const {
+  auto legal_moves_from = legal_moves_.find(piece_on_square);
+  if (legal_moves_from == legal_moves_.end()) {
+    // The piece doesn't have any legal moves (or there is no piece of that type
+    // on that square).
+    return false;
+  }
+  const std::vector<Square>& legal_moves_to = legal_moves_from->second;
+    int i =
+        std::find(legal_moves_to.begin(), legal_moves_to.end(), to_square) -
+        legal_moves_to.begin();
+    if (i == legal_moves_to.size()) {
+      return false;
+    }
+    return true;
+}
+
+PieceMoves LegalMoves::RandomMove() const {
+  auto it = legal_moves_.begin();
+  std::advance(it, rand() % legal_moves_.size());
+  PieceOnSquare from = it->first;
+  std::vector<Square> tos = it->second;
+  auto it2 = tos.begin();
+  std::advance(it2, rand() % tos.size());
+  Square to = *it2;
+  return PieceMoves(from, {to});
 }
 
 nlohmann::json legalMovesJson(const Position& p) {

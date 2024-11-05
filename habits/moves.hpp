@@ -44,8 +44,36 @@ struct PieceOnSquare {
 std::map<PieceOnSquare, uint64_t> possibleMoves(
     const Position& p);
 
-std::map<PieceOnSquare, std::vector<Square>> legalMoves(
-    const Position& p);
+// Representation for a piece on a square, and all the moves it can make from there.
+struct PieceMoves {
+  PieceOnSquare piece_on_square;
+  std::vector<Square> moves;
+
+  PieceMoves(const PieceOnSquare& piece_on_square, const std::vector<Square>& moves) :
+      piece_on_square(piece_on_square), moves(moves) {}
+};
+
+class LegalMoves {
+ public:
+  LegalMoves(const Position& p);
+
+  // Sort so highest value pieces furthest away are considered first.
+  std::vector<PieceMoves> Sorted() const;
+
+  // Check if there si a legal move for a piece on a square to a destination square.
+  bool IsLegal(PieceOnSquare piece_on_square, Square to_square) const;
+
+  // Choose a piece and a move for it at random. The returned PieceMoves
+  // will always contain only a single move.
+  PieceMoves RandomMove() const;
+
+ private:
+  Color active_color_;
+  std::map<PieceOnSquare, std::vector<Square>> legal_moves_;
+};
+
+// std::map<PieceOnSquare, std::vector<Square>> legalMoves(
+//     const Position& p);
 
 // Determine the legal moves for the active color in the Position.
 // The returned JSON maps the squares (in algebraic notation) that contain

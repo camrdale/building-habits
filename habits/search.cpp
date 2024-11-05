@@ -56,29 +56,21 @@ const std::vector<
 
 std::string searchPresetMoves(
     const Position& p,
-    const std::map<PieceOnSquare, std::vector<Square>>& legal_moves,
+    const LegalMoves& legal_moves,
     std::map<Square, std::pair<int, int>>& control_squares,
     const std::vector<std::pair<PieceOnSquare,
                                 std::vector<Square>>>& preset_moves) {
   for (const auto& [piece_and_square, tos] : preset_moves) {
-    auto legal_moves_from = legal_moves.find(PieceOnSquare(
-        piece_and_square.piece, piece_and_square.square));
-    if (legal_moves_from != legal_moves.end()) {
-      const std::vector<Square>& legal_moves_to = legal_moves_from->second;
-      for (const Square& to_square : tos) {
-        int i =
-            std::find(legal_moves_to.begin(), legal_moves_to.end(), to_square) -
-            legal_moves_to.begin();
-        if (i != legal_moves_to.size()) {
-          bool controlled = control_squares.count(to_square) > 0;
-          int control =
-              controlled ? control_squares[to_square].second : pieceValue(KING);
-          if (control >= pieceValue(piece_and_square.piece)) {
-            std::cout << "Found preset move of " << piece_and_square.piece
-                      << " from " << piece_and_square.square << " to " << to_square
-                      << " control value " << control << std::endl;
-            return piece_and_square.square.Algebraic() + to_square.Algebraic();
-          }
+    for (const Square& to_square : tos) {
+      if (legal_moves.IsLegal(piece_and_square, to_square)) {
+        bool controlled = control_squares.count(to_square) > 0;
+        int control =
+            controlled ? control_squares[to_square].second : pieceValue(KING);
+        if (control >= pieceValue(piece_and_square.piece)) {
+          std::cout << "Found preset move of " << piece_and_square.piece
+                    << " from " << piece_and_square.square << " to " << to_square
+                    << " control value " << control << std::endl;
+          return piece_and_square.square.Algebraic() + to_square.Algebraic();
         }
       }
     }
@@ -102,28 +94,14 @@ int getOpponentPieceValue(const Position& p, Square move_square) {
 }  // namespace
 
 std::string Game::bestMove(const Position& p) {
-  // Know how all the pieces move.
-  std::map<PieceOnSquare, std::vector<Square>> legal_moves =
-      legalMoves(p);
-  std::vector<std::pair<PieceOnSquare, std::vector<Square>>>
-      sorted_legal_moves(legal_moves.begin(), legal_moves.end());
-  // Sort so highest value pieces furthest away are considered first.
-  std::sort(
-      sorted_legal_moves.begin(), sorted_legal_moves.end(),
-      [p](std::pair<PieceOnSquare, std::vector<Square>> left,
-          std::pair<PieceOnSquare, std::vector<Square>> right) {
-        if (left.first.piece != right.first.piece) {
-          return left.first.piece > right.first.piece;
-        }
-        if (p.active_color == WHITE) {
-          return right.first.square < left.first.square;
-        }
-        return left.first.square < right.first.square;
-      });
-
   std::string bestmove;
 
+  // Know how all the pieces move.
+  LegalMoves legal_moves(p);
+
   std::map<Square, std::pair<int, int>> control_squares = controlSquares(p);
+
+  std::vector<PieceMoves> sorted_legal_moves = legal_moves.Sorted();
 
   // 1. Don't hang free pieces.
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
@@ -274,16 +252,11 @@ std::string Game::bestMove(const Position& p) {
   // Random pawn moves not on the king side.
 
   // Nothing else? make a random move.
-  auto it = legal_moves.begin();
-  std::advance(it, rand() % legal_moves.size());
-  PieceOnSquare from = it->first;
-  std::vector<Square> tos = it->second;
-  auto it2 = tos.begin();
-  std::advance(it2, rand() % tos.size());
-  Square to = *it2;
-  std::cout << "Randomly moving " << from.piece << " from " << from.square
-            << " to " << to << std::endl;
-  return from.square.Algebraic() + to.Algebraic();
+  PieceMoves random_move = legal_moves.RandomMove();
+  std::cout << "Randomly moving " << random_move.piece_on_square.piece
+            << " from " << random_move.piece_on_square.square
+            << " to " << random_move.moves[0] << std::endl;
+  return random_move.piece_on_square.square.Algebraic() + random_move.moves[0].Algebraic();
 }
 
 }  // namespace habits
