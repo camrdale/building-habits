@@ -11,17 +11,15 @@ namespace habits {
 // A piece and its current position on a square on the board.
 struct PieceOnSquare {
   ColoredPiece piece;
-  int square;
+  Square square;
 
-  PieceOnSquare(ColoredPiece piece, int square) {
-    this->piece = piece;
-    this->square = square;
-  }
+  PieceOnSquare(ColoredPiece piece, Square square) :
+      piece(piece),
+      square(square) {}
 
-  PieceOnSquare(ColoredPiece piece, std::string algebraic_square) {
-    this->piece = piece;
-    this->square = parseAlgebraic(algebraic_square);
-  }
+  PieceOnSquare(ColoredPiece piece, std::string algebraic_square) :
+      piece(piece),
+      square(algebraic_square) {}
 
   // Custom comparison operator for std::map.
   bool operator<(const PieceOnSquare& other) const {
@@ -33,7 +31,7 @@ struct PieceOnSquare {
   }
 
   // Equals operator needed for std::find.
-  bool operator==(const PieceOnSquare& other) {
+  bool operator==(const PieceOnSquare& other) const {
     return (this->piece == other.piece) && (this->square == other.square);
   }
 };
@@ -46,7 +44,7 @@ struct PieceOnSquare {
 std::map<PieceOnSquare, uint64_t> possibleMoves(
     const Position& p);
 
-std::map<PieceOnSquare, std::vector<int>> legalMoves(
+std::map<PieceOnSquare, std::vector<Square>> legalMoves(
     const Position& p);
 
 // Determine the legal moves for the active color in the Position.
@@ -57,7 +55,7 @@ nlohmann::json legalMovesJson(const Position& p);
 
 // Applies the move from `from_square` to `to_square` to the Position, promoting
 // to `promote_to` if necessary. The active color is not changed.
-int moveInternal(Position* p, int from_square, int to_square, Piece promote_to);
+int moveInternal(Position* p, Square from_square, Square to_square, Piece promote_to);
 
 // Applies the move in UCI form (2-character algebraic notation for the source
 // square, 2-character algebraic notation for the target square, optional
@@ -75,7 +73,7 @@ bool isActiveColorInCheck(const Position& p);
 // meaning the active color controls the square, negative if the opponent
 // controls it. The second value is the most valuable piece that the controller
 // can move to the square safely.
-std::map<int, std::pair<int, int>> controlSquares(const Position& p);
+std::map<Square, std::pair<int, int>> controlSquares(const Position& p);
 
 // Determine who controls the squares on the board, in JSON format.
 // The keys are the squares of the board (squares that no piece can attack

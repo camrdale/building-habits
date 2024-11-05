@@ -15,15 +15,11 @@ constexpr std::string_view FEN_PIECES = "PNBRQKpnbrqk";
 
 }  // namespace
 
-std::string algebraic(int square) {
+std::string Square::Algebraic() const {
   std::string an;
-  an += static_cast<char>('a' + square % 8);
-  an += static_cast<char>('1' + square / 8);
+  an += static_cast<char>('a' + this->index % 8);
+  an += static_cast<char>('1' + this->index / 8);
   return an;
-}
-
-int parseAlgebraic(std::string_view algebraic) {
-  return (algebraic[1] - '1') * 8 + (algebraic[0] - 'a');
 }
 
 Piece parsePromotion(char promotion) {
@@ -116,11 +112,11 @@ Position Position::FromFen(std::string_view fen) {
   c = *it;
   it++;
   if (c != '-') {
-    int file = c - 'a';
+    int file = c - 'a' + 1;
     c = *it;
     it++;
-    int rank = c - '1';
-    p.en_passant_target_square = 8 * rank + file;
+    int rank = c - '1' + 1;
+    p.en_passant_target_square = Square(rank, file);
   }
 
   it++;
@@ -197,9 +193,9 @@ std::string Position::ToFen() const {
     fen += " " + castling_string;
   }
 
-  if (en_passant_target_square >= 0) {
+  if (en_passant_target_square.IsSet()) {
     fen += ' ';
-    fen += algebraic(en_passant_target_square);
+    fen += en_passant_target_square.Algebraic();
   } else {
     fen += " -";
   }
@@ -213,7 +209,7 @@ std::string Position::ToFen() const {
 Position Position::ForOpponent() const {
   Position p = Duplicate();
   p.active_color = active_color == WHITE ? BLACK : WHITE;
-  p.en_passant_target_square = -1;
+  p.en_passant_target_square = Square();
   return p;
 }
 

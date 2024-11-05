@@ -19,54 +19,53 @@ namespace habits {
 namespace {
 
 const std::vector<
-    std::pair<PieceOnSquare, std::vector<std::string>>>
-    initial_moves_white = {{{WPAWN, "e2"}, {"e4"}}, {{WPAWN, "d2"}, {"d4"}}};
+    std::pair<PieceOnSquare, std::vector<Square>>>
+    initial_moves_white = {{{WPAWN, "e2"}, {{"e4"}}}, {{WPAWN, "d2"}, {{"d4"}}}};
 
 const std::vector<
-    std::pair<PieceOnSquare, std::vector<std::string>>>
-    initial_moves_black = {{{BPAWN, "e7"}, {"e5"}}, {{BPAWN, "d7"}, {"d5"}}};
+    std::pair<PieceOnSquare, std::vector<Square>>>
+    initial_moves_black = {{{BPAWN, "e7"}, {{"e5"}}}, {{BPAWN, "d7"}, {{"d5"}}}};
 
 const std::vector<
-    std::pair<PieceOnSquare, std::vector<std::string>>>
-    developing_moves_white = {{{WPAWN, "e2"}, {"e4", "e3"}},
-                              {{WKNIGHT, "g1"}, {"f3", "e2"}},
-                              {{WKNIGHT, "b1"}, {"c3", "d2"}},
-                              {{WBISHOP, "f1"}, {"c4", "e2", "b5"}},
-                              {{WKING, "e1"}, {"g1", "c1"}},
-                              {{WPAWN, "d2"}, {"d3", "d4"}},
-                              {{WBISHOP, "c1"}, {"e3", "f4", "d2", "g5"}},
-                              {{WQUEEN, "d1"}, {"d2", "e2"}},
-                              {{WROOK, "f1"}, {"e1"}},
-                              {{WROOK, "a1"}, {"d1", "c1"}},
-                              {{WPAWN, "h2"}, {"h3"}}};
+    std::pair<PieceOnSquare, std::vector<Square>>>
+    developing_moves_white = {{{WPAWN, "e2"}, {{"e4"}, {"e3"}}},
+                              {{WKNIGHT, "g1"}, {{"f3"}, {"e2"}}},
+                              {{WKNIGHT, "b1"}, {{"c3"}, {"d2"}}},
+                              {{WBISHOP, "f1"}, {{"c4"}, {"e2"}, {"b5"}}},
+                              {{WKING, "e1"}, {{"g1"}, {"c1"}}},
+                              {{WPAWN, "d2"}, {{"d3"}, {"d4"}}},
+                              {{WBISHOP, "c1"}, {{"e3"}, {"f4"}, {"d2"}, {"g5"}}},
+                              {{WQUEEN, "d1"}, {{"d2"}, {"e2"}}},
+                              {{WROOK, "f1"}, {{"e1"}}},
+                              {{WROOK, "a1"}, {{"d1"}, {"c1"}}},
+                              {{WPAWN, "h2"}, {{"h3"}}}};
 
 const std::vector<
-    std::pair<PieceOnSquare, std::vector<std::string>>>
-    developing_moves_black = {{{BPAWN, "e7"}, {"e5", "e6"}},
-                              {{BKNIGHT, "b8"}, {"c6", "d7"}},
-                              {{BKNIGHT, "g8"}, {"f6", "e7"}},
-                              {{BBISHOP, "f8"}, {"c5", "e7", "b4"}},
-                              {{BKING, "e8"}, {"g8", "c8"}},
-                              {{BPAWN, "d7"}, {"d6", "d5"}},
-                              {{BBISHOP, "c8"}, {"e6", "f5", "d7", "g4"}},
-                              {{BQUEEN, "d8"}, {"d7", "e7"}},
-                              {{BROOK, "f8"}, {"e8"}},
-                              {{BROOK, "a8"}, {"d8", "c8"}},
-                              {{BPAWN, "h7"}, {"h6"}}};
+    std::pair<PieceOnSquare, std::vector<Square>>>
+    developing_moves_black = {{{BPAWN, "e7"}, {{"e5"}, {"e6"}}},
+                              {{BKNIGHT, "b8"}, {{"c6"}, {"d7"}}},
+                              {{BKNIGHT, "g8"}, {{"f6"}, {"e7"}}},
+                              {{BBISHOP, "f8"}, {{"c5"}, {"e7"}, {"b4"}}},
+                              {{BKING, "e8"}, {{"g8"}, {"c8"}}},
+                              {{BPAWN, "d7"}, {{"d6"}, {"d5"}}},
+                              {{BBISHOP, "c8"}, {{"e6"}, {"f5"}, {"d7"}, {"g4"}}},
+                              {{BQUEEN, "d8"}, {{"d7"}, {"e7"}}},
+                              {{BROOK, "f8"}, {{"e8"}}},
+                              {{BROOK, "a8"}, {{"d8"}, {"c8"}}},
+                              {{BPAWN, "h7"}, {{"h6"}}}};
 
 std::string searchPresetMoves(
     const Position& p,
-    const std::map<PieceOnSquare, std::vector<int>>& legal_moves,
-    std::map<int, std::pair<int, int>>& control_squares,
+    const std::map<PieceOnSquare, std::vector<Square>>& legal_moves,
+    std::map<Square, std::pair<int, int>>& control_squares,
     const std::vector<std::pair<PieceOnSquare,
-                                std::vector<std::string>>>& preset_moves) {
+                                std::vector<Square>>>& preset_moves) {
   for (const auto& [piece_and_square, tos] : preset_moves) {
     auto legal_moves_from = legal_moves.find(PieceOnSquare(
         piece_and_square.piece, piece_and_square.square));
     if (legal_moves_from != legal_moves.end()) {
-      const std::vector<int>& legal_moves_to = legal_moves_from->second;
-      for (const std::string& to : tos) {
-        int to_square = parseAlgebraic(to);
+      const std::vector<Square>& legal_moves_to = legal_moves_from->second;
+      for (const Square& to_square : tos) {
         int i =
             std::find(legal_moves_to.begin(), legal_moves_to.end(), to_square) -
             legal_moves_to.begin();
@@ -76,9 +75,9 @@ std::string searchPresetMoves(
               controlled ? control_squares[to_square].second : pieceValue(KING);
           if (control >= pieceValue(piece_and_square.piece)) {
             std::cout << "Found preset move of " << piece_and_square.piece
-                      << " from " << piece_and_square.square << " to " << to
+                      << " from " << piece_and_square.square << " to " << to_square
                       << " control value " << control << std::endl;
-            return algebraic(piece_and_square.square) + to;
+            return piece_and_square.square.Algebraic() + to_square.Algebraic();
           }
         }
       }
@@ -87,9 +86,9 @@ std::string searchPresetMoves(
   return "";
 }
 
-int getOpponentPieceValue(const Position& p, int move_square) {
+int getOpponentPieceValue(const Position& p, Square move_square) {
   int starting_piece = p.active_color == WHITE ? 6 : 0;
-  uint64_t move_mask = 1ull << move_square;
+  uint64_t move_mask = move_square.BitboardMask();
   int opponent_piece;
   for (opponent_piece = starting_piece; opponent_piece < starting_piece + 6;
        opponent_piece++) {
@@ -104,27 +103,27 @@ int getOpponentPieceValue(const Position& p, int move_square) {
 
 std::string Game::bestMove(const Position& p) {
   // Know how all the pieces move.
-  std::map<PieceOnSquare, std::vector<int>> legal_moves =
+  std::map<PieceOnSquare, std::vector<Square>> legal_moves =
       legalMoves(p);
-  std::vector<std::pair<PieceOnSquare, std::vector<int>>>
+  std::vector<std::pair<PieceOnSquare, std::vector<Square>>>
       sorted_legal_moves(legal_moves.begin(), legal_moves.end());
   // Sort so highest value pieces furthest away are considered first.
   std::sort(
       sorted_legal_moves.begin(), sorted_legal_moves.end(),
-      [p](std::pair<PieceOnSquare, std::vector<int>> left,
-          std::pair<PieceOnSquare, std::vector<int>> right) {
+      [p](std::pair<PieceOnSquare, std::vector<Square>> left,
+          std::pair<PieceOnSquare, std::vector<Square>> right) {
         if (left.first.piece != right.first.piece) {
           return left.first.piece > right.first.piece;
         }
         if (p.active_color == WHITE) {
-          return left.first.square > right.first.square;
+          return right.first.square < left.first.square;
         }
         return left.first.square < right.first.square;
       });
 
   std::string bestmove;
 
-  std::map<int, std::pair<int, int>> control_squares = controlSquares(p);
+  std::map<Square, std::pair<int, int>> control_squares = controlSquares(p);
 
   // 1. Don't hang free pieces.
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
@@ -132,11 +131,11 @@ std::string Game::bestMove(const Position& p) {
     if (controlled && control_squares[piece_and_square.square].first <
                           pieceValue(piece_and_square.piece)) {
       int max_control = -1;
-      int max_control_square = -1;
+      Square max_control_square;
       int max_opponent_piece_value = 0;
-      int max_opponent_piece_value_square = -1;
+      Square max_opponent_piece_value_square;
       int max_opponent_piece_value_square_control = -1;
-      for (int move_square : move_squares) {
+      for (Square move_square : move_squares) {
         bool move_controlled = control_squares.count(move_square) > 0;
         int control = move_controlled ? control_squares[move_square].second
                                       : pieceValue(KING);
@@ -163,10 +162,10 @@ std::string Game::bestMove(const Position& p) {
                   << " (control value "
                   << max_opponent_piece_value_square_control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.square) +
-               algebraic(max_opponent_piece_value_square);
+        return piece_and_square.square.Algebraic() +
+               max_opponent_piece_value_square.Algebraic();
       }
-      if (max_control_square >= 0) {
+      if (max_control_square.IsSet()) {
         std::cout << "Moving attacked piece " << piece_and_square.piece
                   << " from " << piece_and_square.square << " (control value "
                   << (controlled
@@ -174,8 +173,8 @@ std::string Game::bestMove(const Position& p) {
                           : 0)
                   << ") to " << max_control_square << " (control value "
                   << max_control << ")" << std::endl;
-        return algebraic(piece_and_square.square) +
-               algebraic(max_control_square);
+        return piece_and_square.square.Algebraic() +
+               max_control_square.Algebraic();
       }
       if (max_opponent_piece_value > 0) {
         std::cout << "Sacking attacked piece " << piece_and_square.piece
@@ -185,8 +184,8 @@ std::string Game::bestMove(const Position& p) {
                   << " (control value "
                   << max_opponent_piece_value_square_control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.square) +
-               algebraic(max_opponent_piece_value_square);
+        return piece_and_square.square.Algebraic() +
+               max_opponent_piece_value_square.Algebraic();
       }
     }
   }
@@ -195,9 +194,9 @@ std::string Game::bestMove(const Position& p) {
   // 2. Take free pieces (pawns are not pieces).
   // Reverse sort so we attack with the lowest value pieces first.
   std::reverse(sorted_legal_moves.begin(), sorted_legal_moves.end());
-  std::vector<std::pair<PieceOnSquare, int>> trades;
+  std::vector<std::pair<PieceOnSquare, Square>> trades;
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
-    for (int move_square : move_squares) {
+    for (Square move_square : move_squares) {
       int opponent_piece_value = getOpponentPieceValue(p, move_square);
       bool controlled = control_squares.count(move_square) > 0;
       int control =
@@ -209,7 +208,7 @@ std::string Game::bestMove(const Position& p) {
                   << " from " << piece_and_square.square << " to "
                   << move_square << " (control value " << control << ")"
                   << std::endl;
-        return algebraic(piece_and_square.square) + algebraic(move_square);
+        return piece_and_square.square.Algebraic() + move_square.Algebraic();
       }
       if (opponent_piece_value == pieceValue(piece_and_square.piece)) {
         trades.emplace_back(std::make_pair(piece_and_square, move_square));
@@ -235,7 +234,7 @@ std::string Game::bestMove(const Position& p) {
     auto& [piece_and_square, move_square] = trades[trades.size() - 1];
     std::cout << "Trading pieces with " << piece_and_square.piece << " from "
               << piece_and_square.square << " to " << move_square << std::endl;
-    return algebraic(piece_and_square.square) + algebraic(move_square);
+    return piece_and_square.square.Algebraic() + move_square.Algebraic();
   }
 
   // 4. Always attack a Bishop or Knight on g4/g5 b4/b5 with the a or h pawn
@@ -278,13 +277,13 @@ std::string Game::bestMove(const Position& p) {
   auto it = legal_moves.begin();
   std::advance(it, rand() % legal_moves.size());
   PieceOnSquare from = it->first;
-  std::vector<int> tos = it->second;
+  std::vector<Square> tos = it->second;
   auto it2 = tos.begin();
   std::advance(it2, rand() % tos.size());
-  int to = *it2;
+  Square to = *it2;
   std::cout << "Randomly moving " << from.piece << " from " << from.square
             << " to " << to << std::endl;
-  return algebraic(from.square) + algebraic(to);
+  return from.square.Algebraic() + to.Algebraic();
 }
 
 }  // namespace habits

@@ -50,20 +50,20 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
   uint64_t all_pieces = active_pieces | opponent_pieces;
   uint64_t open_squares = ~all_pieces;
   uint64_t pawn_attack = opponent_pieces;
-  if (p.en_passant_target_square >= 0) {
-    pawn_attack |= (1ull << p.en_passant_target_square);
+  if (p.en_passant_target_square.IsSet()) {
+    pawn_attack |= (1ull << p.en_passant_target_square.index);
   }
 
   int starting_piece = p.active_color == WHITE ? 0 : 6;
   for (int piece = starting_piece; piece < starting_piece + 6; piece++) {
     uint64_t board = p.bitboards[piece];
-    int square = 0;
-    uint64_t mask = 1ull;
-    while (square < 64) {
+    Square square;
+    while (square.Next()) {
+      uint64_t mask = square.BitboardMask();
       if ((board & mask) != 0ull) {
         // There's a `piece` on `square`.
-        int rank = square / 8 + 1;
-        int file = square % 8 + 1;
+        int rank = square.Rank();
+        int file = square.File();
         uint64_t move_board = 0ull;
 
         if (piece == WPAWN) {
@@ -198,7 +198,7 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
         if (piece == WROOK || piece == BROOK || piece == WQUEEN ||
             piece == BQUEEN) {
           if (rank < 8) {
-            uint64_t up_move = A_FILE << (square + 8);
+            uint64_t up_move = A_FILE << (square.index + 8);
             uint64_t nogo_board =
                 up_move & (active_pieces | (opponent_pieces << 8));
             if (nogo_board == 0ull) {
@@ -214,7 +214,7 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
 
           if (file < 8) {
             uint64_t right_move =
-                (RANK_1 << (square + 1)) & (RANK_1 << ((rank - 1) * 8));
+                (RANK_1 << (square.index + 1)) & (RANK_1 << ((rank - 1) * 8));
             uint64_t nogo_board =
                 right_move & (active_pieces | (opponent_pieces << 1));
             if (nogo_board == 0ull) {
@@ -228,7 +228,7 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
           }
 
           if (rank > 1) {
-            uint64_t down_move = A_FILE >> (64 - square);
+            uint64_t down_move = A_FILE >> (64 - square.index);
             uint64_t nogo_board =
                 down_move & (active_pieces | (opponent_pieces >> 8));
             if (nogo_board == 0ull) {
@@ -242,7 +242,7 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
           }
 
           if (file > 1) {
-            uint64_t left_move = ((RANK_1 << 56) >> (64 - square)) &
+            uint64_t left_move = ((RANK_1 << 56) >> (64 - square.index)) &
                                  (RANK_1 << ((rank - 1) * 8));
             uint64_t nogo_board =
                 left_move & (active_pieces | (opponent_pieces >> 1));
@@ -260,9 +260,9 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
 
         if (piece == WBISHOP || piece == BBISHOP || piece == WQUEEN ||
             piece == BQUEEN) {
-          if (square < 55) {
+          if (square.index < 55) {
             // Up to the right from the piece
-            uint64_t up_right_move = DIAGONAL_UP << (square + 9);
+            uint64_t up_right_move = DIAGONAL_UP << (square.index + 9);
             // Remove diagonal that gets shifted to the other side.
             int move_mask_square = 72 - 8 * (file - rank);
             if (move_mask_square < 64) {
@@ -280,9 +280,9 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
             }
           }
 
-          if (square > 8) {
+          if (square.index > 8) {
             // Down to the left from the piece
-            uint64_t down_left_move = DIAGONAL_UP >> (63 - square + 9);
+            uint64_t down_left_move = DIAGONAL_UP >> (63 - square.index + 9);
             // Remove diagonal that gets shifted to the other side.
             int move_mask_square = 8 * (rank - file) - 9;
             if (move_mask_square >= 0) {
@@ -301,9 +301,9 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
             }
           }
 
-          if (square < 56) {
+          if (square.index < 56) {
             // Up to the left from the piece
-            uint64_t up_left_move = DIAGONAL_DOWN << square;
+            uint64_t up_left_move = DIAGONAL_DOWN << square.index;
             // Remove diagonal that gets shifted to the other side.
             int move_mask_square = 8 * (file + rank) - 9;
             if (move_mask_square < 64) {
@@ -322,9 +322,9 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
             }
           }
 
-          if (square > 7) {
+          if (square.index > 7) {
             // Down to the right from the piece
-            uint64_t down_right_move = DIAGONAL_DOWN >> (63 - square);
+            uint64_t down_right_move = DIAGONAL_DOWN >> (63 - square.index);
             // Remove diagonal that gets shifted to the other side.
             int move_mask_shift = 8 * (16 - rank - file);
             if (move_mask_shift < 64) {
@@ -349,25 +349,23 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
               move_board;
         }
       }
-      square++;
-      mask <<= 1;
     }
   }
   return legal;
 }
 
-std::map<PieceOnSquare, std::vector<int>> legalMoves(
+std::map<PieceOnSquare, std::vector<Square>> legalMoves(
     const Position& p) {
-  std::map<PieceOnSquare, std::vector<int>> legal;
+  std::map<PieceOnSquare, std::vector<Square>> legal;
 
   std::map<PieceOnSquare, uint64_t> possible_move_boards =
       possibleMoves(p);
   for (const auto& [piece_and_square, move_board] : possible_move_boards) {
     if (move_board != 0ull) {
-      std::vector<int> targets;
-      int move_square = 0;
-      uint64_t move_mask = 1ull;
-      while (move_square < 64) {
+      std::vector<Square> targets;
+      Square move_square;
+      while (move_square.Next()) {
+        uint64_t move_mask = move_square.BitboardMask();
         if ((move_board & move_mask) != 0ull) {
           // Try the move (promotion type can't affect check).
           Position tmpP = p.Duplicate();
@@ -377,8 +375,6 @@ std::map<PieceOnSquare, std::vector<int>> legalMoves(
             targets.push_back(move_square);
           }
         }
-        move_square++;
-        move_mask <<= 1;
       }
       if (p.active_color == BLACK) {
         // Move square list should be sorted from nearest to furthest.
@@ -401,23 +397,21 @@ nlohmann::json legalMovesJson(const Position& p) {
   for (const auto& [piece_and_square, move_board] : possible_move_boards) {
     if (move_board != 0ull) {
       nlohmann::json targets = nlohmann::json::array();
-      int move_square = 0;
-      uint64_t move_mask = 1ull;
-      while (move_square < 64) {
+      Square move_square;
+      while (move_square.Next()) {
+        uint64_t move_mask = move_square.BitboardMask();
         if ((move_board & move_mask) != 0ull) {
           // Try the move (promotion type can't affect check).
           Position tmpP = p.Duplicate();
           moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
           // Don't add it if it results in being in check.
           if (!isActiveColorInCheck(tmpP)) {
-            targets.push_back(algebraic(move_square));
+            targets.push_back(move_square.Algebraic());
           }
         }
-        move_square++;
-        move_mask <<= 1;
       }
       if (!targets.empty()) {
-        legal[algebraic(piece_and_square.square)] = std::move(targets);
+        legal[piece_and_square.square.Algebraic()] = std::move(targets);
       }
     }
   }
@@ -438,10 +432,10 @@ bool isActiveColorInCheck(const Position& p) {
   return false;
 }
 
-int moveInternal(Position* p, int from_square, int to_square,
+int moveInternal(Position* p, Square from_square, Square to_square,
                  Piece promote_to) {
-  uint64_t from_mask = 1ull << from_square;
-  uint64_t to_mask = 1ull << to_square;
+  uint64_t from_mask = from_square.BitboardMask();
+  uint64_t to_mask = to_square.BitboardMask();
 
   // Find which peice moved.
   int starting_piece = p->active_color == WHITE ? 0 : 6;
@@ -474,16 +468,16 @@ int moveInternal(Position* p, int from_square, int to_square,
 
   // Check for en passant capture.
   if (piece % 6 == PAWN && p->en_passant_target_square == to_square) {
-    int en_passant_square = to_square - (p->active_color == WHITE ? 8 : -8);
+    int en_passant_square = to_square.index - (p->active_color == WHITE ? 8 : -8);
     p->bitboards[6 - piece] &= ~(1ull << en_passant_square);
     p->halfmove_clock = 0;
   }
-  p->en_passant_target_square = -1;
+  p->en_passant_target_square = Square();
 
   // Remove the from square from the piece's board.
   p->bitboards[piece] &= ~from_mask;
 
-  if (piece % 6 == PAWN && (to_square >= 56 || to_square <= 7)) {
+  if (piece % 6 == PAWN && (to_square.index >= 56 || to_square.index <= 7)) {
     // Promote to queen by default
     int promotion_piece = piece + promote_to - PAWN;
     p->bitboards[promotion_piece] |= to_mask;
@@ -494,45 +488,45 @@ int moveInternal(Position* p, int from_square, int to_square,
   }
 
   // Check for castling.
-  if (piece % 6 == KING && abs(from_square - to_square) == 2) {
+  if (piece % 6 == KING && abs(from_square.index - to_square.index) == 2) {
     int rook_piece = piece - 2;
     int rook_square;
-    if (from_square > to_square) {
+    if (to_square < from_square) {
       // O-O-O
-      rook_square = from_square - 4;
+      rook_square = from_square.index - 4;
     } else {
       // O-O
-      rook_square = from_square + 3;
+      rook_square = from_square.index + 3;
     }
     p->bitboards[rook_piece] &= ~(1ull << rook_square);
-    p->bitboards[rook_piece] |= 1ull << ((from_square + to_square) / 2);
+    p->bitboards[rook_piece] |= 1ull << ((from_square.index + to_square.index) / 2);
   }
 
   // Update castling availability, en passant and halfmove clock.
   switch (piece) {
     case WPAWN:
       p->halfmove_clock = 0;
-      if (to_square - from_square == 16) {
-        p->en_passant_target_square = from_square + 8;
+      if (to_square.index - from_square.index == 16) {
+        p->en_passant_target_square = Square(from_square.index + 8);
       }
       break;
     case BPAWN:
       p->halfmove_clock = 0;
-      if (to_square - from_square == -16) {
-        p->en_passant_target_square = from_square - 8;
+      if (to_square.index - from_square.index == -16) {
+        p->en_passant_target_square = Square(from_square.index - 8);
       }
       break;
     case WROOK:
-      if (from_square == 0) {
+      if (from_square.index == 0) {
         p->castling[WOOO] = false;
-      } else if (from_square == 7) {
+      } else if (from_square.index == 7) {
         p->castling[WOO] = false;
       }
       break;
     case BROOK:
-      if (from_square == 56) {
+      if (from_square.index == 56) {
         p->castling[BOOO] = false;
-      } else if (from_square == 63) {
+      } else if (from_square.index == 63) {
         p->castling[BOO] = false;
       }
       break;
@@ -554,8 +548,8 @@ int moveInternal(Position* p, int from_square, int to_square,
 }
 
 int move(Position* p, std::string_view move) {
-  int from_square = parseAlgebraic(move.substr(0, 2));
-  int to_square = parseAlgebraic(move.substr(2, 2));
+  Square from_square(move.substr(0, 2));
+  Square to_square(move.substr(2, 2));
 
   // Promote to queen by default
   Piece promotion_piece = QUEEN;
@@ -594,8 +588,8 @@ int pieceValue(int piece) {
   return 0;
 }
 
-std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
-  std::map<int, std::pair<int, int>> control_squares;
+std::map<Square, std::pair<int, int>> controlSquares(const Position& p) {
+  std::map<Square, std::pair<int, int>> control_squares;
 
   const std::map<PieceOnSquare, uint64_t> active_moves =
       possibleMoves(p);
@@ -613,9 +607,9 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
     }
   }
 
-  int square = 0;
-  uint64_t mask = 1ull;
-  while (square < 64) {
+  Square square;
+  while (square.Next()) {
+    uint64_t mask = square.BitboardMask();
     std::map<PieceOnSquare, uint64_t> temp_active_moves =
         active_moves;
     std::map<PieceOnSquare, uint64_t> temp_opponent_moves =
@@ -684,9 +678,6 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
       control_squares[square] =
           std::make_pair(min_defended_piece, min_move_piece);
     }
-
-    square++;
-    mask <<= 1;
   }
 
   return control_squares;
@@ -695,7 +686,7 @@ std::map<int, std::pair<int, int>> controlSquares(const Position& p) {
 nlohmann::json controlSquaresJson(const Position& p) {
   nlohmann::json control_squares;
   for (auto [square, control] : controlSquares(p)) {
-    control_squares[algebraic(square)] = control.first;
+    control_squares[square.Algebraic()] = control.first;
   }
   return control_squares;
 }

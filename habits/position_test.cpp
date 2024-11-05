@@ -10,21 +10,21 @@ namespace habits {
 namespace {
 
 TEST(PositionTest, AlgebraicNotation) {
-  EXPECT_EQ(algebraic(0), "a1");
-  EXPECT_EQ(algebraic(1), "b1");
-  EXPECT_EQ(algebraic(8), "a2");
-  EXPECT_EQ(algebraic(55), "h7");
-  EXPECT_EQ(algebraic(56), "a8");
-  EXPECT_EQ(algebraic(63), "h8");
+  EXPECT_EQ(Square(0).Algebraic(), "a1");
+  EXPECT_EQ(Square(1).Algebraic(), "b1");
+  EXPECT_EQ(Square(8).Algebraic(), "a2");
+  EXPECT_EQ(Square(55).Algebraic(), "h7");
+  EXPECT_EQ(Square(56).Algebraic(), "a8");
+  EXPECT_EQ(Square(63).Algebraic(), "h8");
 }
 
 TEST(PositionTest, ParseAlgebraicNotation) {
-  EXPECT_EQ(parseAlgebraic("a1"), 0);
-  EXPECT_EQ(parseAlgebraic("b1"), 1);
-  EXPECT_EQ(parseAlgebraic("a2"), 8);
-  EXPECT_EQ(parseAlgebraic("h7"), 55);
-  EXPECT_EQ(parseAlgebraic("a8"), 56);
-  EXPECT_EQ(parseAlgebraic("h8"), 63);
+  EXPECT_EQ(Square("a1").index, 0);
+  EXPECT_EQ(Square("b1").index, 1);
+  EXPECT_EQ(Square("a2").index, 8);
+  EXPECT_EQ(Square("h7").index, 55);
+  EXPECT_EQ(Square("a8").index, 56);
+  EXPECT_EQ(Square("h8").index, 63);
 }
 
 TEST(PositionTest, ParsePromotion) {
