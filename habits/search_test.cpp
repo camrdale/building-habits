@@ -55,5 +55,29 @@ TEST(SearchTest, TakingFreeDefendedPiece) {
             "f6h7");
 }
 
+TEST(SearchTest, AttackKnightsBishopsOnB4B5G4G5) {
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "rnbqk1nr/pppp1ppp/8/4p3/1b2P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 0 1")),
+      "a2a3");
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "rn1qkbnr/ppp1pppp/3p4/8/4P1b1/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1")),
+      "h2h3");
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "rnbqkbnr/pppp1ppp/8/1N2p3/8/8/PPPPPPPP/R1BQKBNR b KQkq - 0 1")),
+      "a7a6");
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "rnbqkbnr/ppp1pppp/8/3p2N1/8/8/PPPPPPPP/RNBQKB1R b KQkq - 0 1")),
+      "h7h6");
+  // Taking free pieces overrides the attack.
+  EXPECT_EQ(
+      Game(INITIAL).bestMove(Position::FromFen(
+          "rnbqkbnr/pppp1ppp/8/4p1N1/8/8/PPPPPPPP/RNBQKB1R b KQkq - 0 1")),
+      "d8g5");
+}
+
 }  // namespace
 }  // namespace habits

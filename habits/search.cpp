@@ -194,6 +194,25 @@ std::string Game::bestMove(const Position& p) {
     }
   }
 
+  // 4. Always attack a Bishop or Knight on g4/g5 b4/b5 with the a or h pawn
+  // immediately.
+  if (((p.bitboards[BBISHOP] | p.bitboards[BKNIGHT]) & Square("b4").BitboardMask()) != 0ull
+      && legal_moves.IsLegal(PieceOnSquare(WPAWN, Square("a2")), Square("a3"))) {
+    return "a2a3";
+  }
+  if (((p.bitboards[BBISHOP] | p.bitboards[BKNIGHT]) & Square("g4").BitboardMask()) != 0ull
+      && legal_moves.IsLegal(PieceOnSquare(WPAWN, Square("h2")), Square("h3"))) {
+    return "h2h3";
+  }
+  if (((p.bitboards[WBISHOP] | p.bitboards[WKNIGHT]) & Square("b5").BitboardMask()) != 0ull
+      && legal_moves.IsLegal(PieceOnSquare(BPAWN, Square("a7")), Square("a6"))) {
+    return "a7a6";
+  }
+  if (((p.bitboards[WBISHOP] | p.bitboards[WKNIGHT]) & Square("g5").BitboardMask()) != 0ull
+      && legal_moves.IsLegal(PieceOnSquare(BPAWN, Square("h7")), Square("h6"))) {
+    return "h7h6";
+  }
+
   if (stage_ == INITIAL) {
     bestmove = searchPresetMoves(
         p, legal_moves, control_squares,
@@ -214,9 +233,6 @@ std::string Game::bestMove(const Position& p) {
               << piece_and_square.square << " to " << move_square << std::endl;
     return piece_and_square.square.Algebraic() + move_square.Algebraic();
   }
-
-  // 4. Always attack a Bishop or Knight on g4/g5 b4/b5 with the a or h pawn
-  // immediately.
 
   // 5. Castle as soon as possible.
   // 6. Make an escape square for the king once finished development.
