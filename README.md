@@ -50,6 +50,15 @@ After the build is completed (still in the `build` directory), run the tests:
 ctest
 ```
 
+### Coverage
+
+To get a code coverge report, run from the `build` directory:
+
+```
+cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..
+make coverage
+```
+
 ## Running
 
 Install the dependencies needed for running:

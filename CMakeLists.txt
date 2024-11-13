@@ -9,6 +9,19 @@ set(JSON_ImplicitConversions OFF)
 include(CTest)
 enable_testing()
 
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+option(ENABLE_COVERAGE "Enable code coverage" OFF)
+if(ENABLE_COVERAGE)
+    include(CodeCoverage)
+    append_coverage_compiler_flags()
+    setup_target_for_coverage_lcov(
+        NAME coverage
+        EXECUTABLE ctest -j 4
+        DEPENDENCIES position_test moves_test search_test
+        EXCLUDE "/usr/include/*" "/usr/local/include/*")
+endif()
+
 add_executable(BuildingHabits main.cpp)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
