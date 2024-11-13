@@ -31,8 +31,11 @@ constexpr uint64_t DIAGONAL_DOWN = 0x102040810204080ull;
 constexpr uint64_t KNIGHT_MOVES_C3 = 0xa1100110aull;
 constexpr uint64_t KING_MOVES_B2 = 0x70507ull;
 
-}  // namespace
-
+// Determine the possible moves for the active color in the Position.
+// Possible moves have not been verified to not result in check, so they may not
+// be legal. The map's keys are the pieces and their current squares for the
+// active color, the values are a bitboard of all the possible moves for the
+// piece on that square. Pieces with no possible moves will not be present.
 std::map<PieceOnSquare, uint64_t> possibleMoves(
     const Position& p) {
   std::map<PieceOnSquare, uint64_t> legal;
@@ -354,127 +357,8 @@ std::map<PieceOnSquare, uint64_t> possibleMoves(
   return legal;
 }
 
-LegalMoves::LegalMoves(const Position& p) : active_color_(p.active_color) {
-  std::map<PieceOnSquare, uint64_t> possible_move_boards =
-      possibleMoves(p);
-  for (const auto& [piece_and_square, move_board] : possible_move_boards) {
-    if (move_board != 0ull) {
-      std::vector<Square> targets;
-      Square move_square;
-      while (move_square.Next()) {
-        uint64_t move_mask = move_square.BitboardMask();
-        if ((move_board & move_mask) != 0ull) {
-          // Try the move (promotion type can't affect check).
-          Position tmpP = p.Duplicate();
-          moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
-          // Don't add it if it results in being in check.
-          if (!isActiveColorInCheck(tmpP)) {
-            targets.push_back(move_square);
-          }
-        }
-      }
-      if (p.active_color == BLACK) {
-        // Move square list should be sorted from nearest to furthest.
-        std::reverse(targets.begin(), targets.end());
-      }
-      if (!targets.empty()) {
-        legal_moves_[piece_and_square] = std::move(targets);
-      }
-    }
-  }
-}
-
-std::vector<PieceMoves> LegalMoves::Sorted() const {
-  std::vector<PieceMoves> sorted_legal_moves;
-  for (const auto& [piece_on_square, moves] : legal_moves_) {
-    sorted_legal_moves.push_back(PieceMoves(piece_on_square, moves));
-  }
-  // Sort so highest value pieces furthest away are considered first.
-  std::sort(
-      sorted_legal_moves.begin(), sorted_legal_moves.end(),
-      [this](PieceMoves left, PieceMoves right) {
-        if (left.piece_on_square.piece != right.piece_on_square.piece) {
-          return left.piece_on_square.piece > right.piece_on_square.piece;
-        }
-        if (active_color_ == WHITE) {
-          return right.piece_on_square.square < left.piece_on_square.square;
-        }
-        return left.piece_on_square.square < right.piece_on_square.square;
-      });
-  return sorted_legal_moves;
-}
-
-bool LegalMoves::IsLegal(PieceOnSquare piece_on_square, Square to_square) const {
-  auto legal_moves_from = legal_moves_.find(piece_on_square);
-  if (legal_moves_from == legal_moves_.end()) {
-    // The piece doesn't have any legal moves (or there is no piece of that type
-    // on that square).
-    return false;
-  }
-  const std::vector<Square>& legal_moves_to = legal_moves_from->second;
-    int i =
-        std::find(legal_moves_to.begin(), legal_moves_to.end(), to_square) -
-        legal_moves_to.begin();
-    if (i == legal_moves_to.size()) {
-      return false;
-    }
-    return true;
-}
-
-PieceMoves LegalMoves::RandomMove() const {
-  auto it = legal_moves_.begin();
-  std::advance(it, rand() % legal_moves_.size());
-  PieceOnSquare from = it->first;
-  std::vector<Square> tos = it->second;
-  auto it2 = tos.begin();
-  std::advance(it2, rand() % tos.size());
-  Square to = *it2;
-  return PieceMoves(from, {to});
-}
-
-nlohmann::json legalMovesJson(const Position& p) {
-  nlohmann::json legal;
-
-  std::map<PieceOnSquare, uint64_t> possible_move_boards =
-      possibleMoves(p);
-  for (const auto& [piece_and_square, move_board] : possible_move_boards) {
-    if (move_board != 0ull) {
-      nlohmann::json targets = nlohmann::json::array();
-      Square move_square;
-      while (move_square.Next()) {
-        uint64_t move_mask = move_square.BitboardMask();
-        if ((move_board & move_mask) != 0ull) {
-          // Try the move (promotion type can't affect check).
-          Position tmpP = p.Duplicate();
-          moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
-          // Don't add it if it results in being in check.
-          if (!isActiveColorInCheck(tmpP)) {
-            targets.push_back(move_square.Algebraic());
-          }
-        }
-      }
-      if (!targets.empty()) {
-        legal[piece_and_square.square.Algebraic()] = std::move(targets);
-      }
-    }
-  }
-
-  return legal;
-}
-
-bool isActiveColorInCheck(const Position& p) {
-  std::map<PieceOnSquare, uint64_t> opponent_moves =
-      possibleMoves(p.ForOpponent());
-  uint64_t king_board = p.bitboards[p.active_color == WHITE ? WKING : BKING];
-  for (const auto& [square, move_board] : opponent_moves) {
-    if ((king_board & move_board) != 0ull) {
-      return true;
-      break;
-    }
-  }
-  return false;
-}
-
+// Applies the move from `from_square` to `to_square` to the Position, promoting
+// to `promote_to` if necessary. The active color is not changed.
 int moveInternal(Position* p, Square from_square, Square to_square,
                  Piece promote_to) {
   uint64_t from_mask = from_square.BitboardMask();
@@ -590,6 +474,114 @@ int moveInternal(Position* p, Square from_square, Square to_square,
   return 0;
 }
 
+}  // namespace
+
+LegalMoves::LegalMoves(const Position& p) : active_color_(p.active_color) {
+  std::map<PieceOnSquare, uint64_t> possible_move_boards =
+      possibleMoves(p);
+  for (const auto& [piece_and_square, move_board] : possible_move_boards) {
+    if (move_board != 0ull) {
+      std::vector<Square> targets;
+      Square move_square;
+      while (move_square.Next()) {
+        uint64_t move_mask = move_square.BitboardMask();
+        if ((move_board & move_mask) != 0ull) {
+          // Try the move (promotion type can't affect check).
+          Position tmpP = p.Duplicate();
+          moveInternal(&tmpP, piece_and_square.square, move_square, QUEEN);
+          // Don't add it if it results in being in check.
+          if (!isActiveColorInCheck(tmpP)) {
+            targets.push_back(move_square);
+          }
+        }
+      }
+      if (p.active_color == BLACK) {
+        // Move square list should be sorted from nearest to furthest.
+        std::reverse(targets.begin(), targets.end());
+      }
+      if (!targets.empty()) {
+        legal_moves_[piece_and_square] = std::move(targets);
+      }
+    }
+  }
+}
+
+std::vector<PieceMoves> LegalMoves::Sorted() const {
+  std::vector<PieceMoves> sorted_legal_moves;
+  for (const auto& [piece_on_square, moves] : legal_moves_) {
+    sorted_legal_moves.push_back(PieceMoves(piece_on_square, moves));
+  }
+  // Sort so highest value pieces furthest away are considered first.
+  std::sort(
+      sorted_legal_moves.begin(), sorted_legal_moves.end(),
+      [this](PieceMoves left, PieceMoves right) {
+        if (left.piece_on_square.piece != right.piece_on_square.piece) {
+          return left.piece_on_square.piece > right.piece_on_square.piece;
+        }
+        if (active_color_ == WHITE) {
+          return right.piece_on_square.square < left.piece_on_square.square;
+        }
+        return left.piece_on_square.square < right.piece_on_square.square;
+      });
+  return sorted_legal_moves;
+}
+
+bool LegalMoves::IsLegal(PieceOnSquare piece_on_square, Square to_square) const {
+  auto legal_moves_from = legal_moves_.find(piece_on_square);
+  if (legal_moves_from == legal_moves_.end()) {
+    // The piece doesn't have any legal moves (or there is no piece of that type
+    // on that square).
+    return false;
+  }
+  const std::vector<Square>& legal_moves_to = legal_moves_from->second;
+    int i =
+        std::find(legal_moves_to.begin(), legal_moves_to.end(), to_square) -
+        legal_moves_to.begin();
+    if (i == legal_moves_to.size()) {
+      return false;
+    }
+    return true;
+}
+
+PieceMoves LegalMoves::RandomMove() const {
+  auto it = legal_moves_.begin();
+  std::advance(it, rand() % legal_moves_.size());
+  PieceOnSquare from = it->first;
+  std::vector<Square> tos = it->second;
+  auto it2 = tos.begin();
+  std::advance(it2, rand() % tos.size());
+  Square to = *it2;
+  return PieceMoves(from, {to});
+}
+
+nlohmann::json LegalMoves::ToJson() const {
+  nlohmann::json legal;
+  for (const auto& [piece_and_square, move_squares] : legal_moves_) {
+    nlohmann::json targets = nlohmann::json::array();
+    for (const Square& move_square : move_squares) {
+      targets.push_back(move_square.Algebraic());
+    }
+    if (!targets.empty()) {
+      legal[piece_and_square.square.Algebraic()] = std::move(targets);
+    }
+  }
+
+  return legal;
+}
+
+bool isActiveColorInCheck(const Position& p) {
+  std::map<PieceOnSquare, uint64_t> opponent_moves =
+      possibleMoves(p.ForOpponent());
+  uint64_t king_board = p.bitboards[p.active_color == WHITE ? WKING : BKING];
+  for (const auto& [square, move_board] : opponent_moves) {
+    if ((king_board & move_board) != 0ull) {
+      return true;
+      break;
+    }
+  }
+  return false;
+}
+
 int move(Position* p, std::string_view move) {
   Square from_square(move.substr(0, 2));
   Square to_square(move.substr(2, 2));
@@ -613,7 +605,7 @@ int move(Position* p, std::string_view move) {
   return 0;
 }
 
-int pieceValue(int piece) {
+int ControlSquares::pieceValue(int piece) {
   switch (piece % 6) {
     case PAWN:
       return 1;
@@ -631,9 +623,7 @@ int pieceValue(int piece) {
   return 0;
 }
 
-std::map<Square, std::pair<int, int>> controlSquares(const Position& p) {
-  std::map<Square, std::pair<int, int>> control_squares;
-
+ControlSquares::ControlSquares(const Position& p) : p_(p) {
   const std::map<PieceOnSquare, uint64_t> active_moves =
       possibleMoves(p);
   const std::map<PieceOnSquare, uint64_t> opponent_moves =
@@ -718,18 +708,125 @@ std::map<Square, std::pair<int, int>> controlSquares(const Position& p) {
         min_move_piece = pieceValue(PAWN);
       }
 
-      control_squares[square] =
-          std::make_pair(min_defended_piece, min_move_piece);
+      control_squares_.emplace(square, ControlValues(min_defended_piece, min_move_piece));
     }
   }
-
-  return control_squares;
 }
 
-nlohmann::json controlSquaresJson(const Position& p) {
+bool ControlSquares::IsSafeToMove(ColoredPiece piece, const Square& square) const {
+  bool controlled = control_squares_.count(square) > 0;
+  int control =
+      controlled ? control_squares_.at(square).safe_move : pieceValue(KING);
+  if (control >= pieceValue(piece)) {
+    return true;
+  }
+  return false;
+}
+
+bool ControlSquares::IsPieceAttacked(const PieceOnSquare& piece_on_square) const {
+  bool controlled = control_squares_.count(piece_on_square.square) > 0;
+  if (controlled && control_squares_.at(piece_on_square.square).safe_piece <
+                        pieceValue(piece_on_square.piece)) {
+    return true;
+  } 
+  return false;
+}
+
+int ControlSquares::getOpponentPieceValue(Square square) const {
+  int starting_piece = p_.active_color == WHITE ? 6 : 0;
+  uint64_t move_mask = square.BitboardMask();
+  int opponent_piece;
+  for (opponent_piece = starting_piece; opponent_piece < starting_piece + 6;
+       opponent_piece++) {
+    if ((p_.bitboards[opponent_piece] & move_mask) != 0ull) {
+      return ControlSquares::pieceValue(opponent_piece);
+    }
+  }
+  return 0;
+}
+
+Square ControlSquares::SafestMove(ColoredPiece piece, const std::vector<Square>& moves) const {
+  int max_control = -1;
+  Square max_control_square;
+  for (Square move_square : moves) {
+    bool move_controlled = control_squares_.count(move_square) > 0;
+    int control = move_controlled ? control_squares_.at(move_square).safe_move
+                                  : pieceValue(KING);
+    if (control >= pieceValue(piece) && control > max_control) {
+      max_control = control;
+      max_control_square = move_square;
+    }
+  }
+  return max_control_square;
+}
+
+Square ControlSquares::BestTake(ColoredPiece piece, const std::vector<Square>& moves) const {
+  int max_opponent_piece_value = 0;
+  Square max_opponent_piece_value_square;
+  int max_opponent_piece_value_square_control = -1;
+  for (Square move_square : moves) {
+    bool move_controlled = control_squares_.count(move_square) > 0;
+    int control = move_controlled ? control_squares_.at(move_square).safe_move
+                                  : pieceValue(KING);
+    int opponent_piece_value = getOpponentPieceValue(move_square);
+    if (opponent_piece_value > max_opponent_piece_value) {
+      max_opponent_piece_value = opponent_piece_value;
+      max_opponent_piece_value_square = move_square;
+      max_opponent_piece_value_square_control = control;
+    }
+  }
+  if (max_opponent_piece_value >= pieceValue(piece) ||
+      max_opponent_piece_value_square_control >= pieceValue(piece)) {
+    return max_opponent_piece_value_square;
+  }
+  return Square();
+}
+
+Square ControlSquares::BestSack(ColoredPiece piece, const std::vector<Square>& moves) const {
+  int max_opponent_piece_value = 0;
+  Square max_opponent_piece_value_square;
+  for (Square move_square : moves) {
+    int opponent_piece_value = getOpponentPieceValue(move_square);
+    if (opponent_piece_value > max_opponent_piece_value) {
+      max_opponent_piece_value = opponent_piece_value;
+      max_opponent_piece_value_square = move_square;
+    }
+  }
+  if (max_opponent_piece_value > 0) {
+    return max_opponent_piece_value_square;
+  }
+  return Square();
+}
+
+Square ControlSquares::FirstHanging(ColoredPiece piece, const std::vector<Square>& moves) const {
+  for (Square move_square : moves) {
+    int opponent_piece_value = getOpponentPieceValue(move_square);
+    bool controlled = control_squares_.count(move_square) > 0;
+    int control =
+        controlled ? control_squares_.at(move_square).safe_move : pieceValue(KING);
+    if (opponent_piece_value > pieceValue(piece) ||
+        (opponent_piece_value > 0 && control >= pieceValue(piece))) {
+      return move_square;
+    }
+  }
+  return Square();
+}
+
+PieceMoves ControlSquares::Trades(const PieceOnSquare& piece_on_square, const std::vector<Square>& moves) const {
+  std::vector<Square> trades;
+  for (Square move_square : moves) {
+    int opponent_piece_value = getOpponentPieceValue(move_square);
+    if (opponent_piece_value == pieceValue(piece_on_square.piece)) {
+      trades.emplace_back(move_square);
+    }
+  }
+  return PieceMoves(piece_on_square, trades);
+}
+
+nlohmann::json ControlSquares::ToJson() const {
   nlohmann::json control_squares;
-  for (auto [square, control] : controlSquares(p)) {
-    control_squares[square.Algebraic()] = control.first;
+  for (auto [square, control] : control_squares_) {
+    control_squares[square.Algebraic()] = control.safe_piece;
   }
   return control_squares;
 }

@@ -38,10 +38,10 @@ nlohmann::json buildResponse(const Position& p, const std::string& last_move) {
   response["fen"] = p.ToFen();
   response["last_move"] = last_move;
   response["turn"] = p.active_color == WHITE ? "w" : "b";
-  response["legal"] = legalMovesJson(p);
+  response["legal"] = LegalMoves(p).ToJson();
   // Always send the control squares from white's perspective.
   response["control"] =
-      controlSquaresJson(p.active_color == WHITE ? p : p.ForOpponent());
+      ControlSquares(p.active_color == WHITE ? p : p.ForOpponent()).ToJson();
   bool is_check = isActiveColorInCheck(p);
   response["in_check"] = is_check;
   response["in_checkmate"] = is_check && response["legal"].empty();

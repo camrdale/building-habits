@@ -13,7 +13,7 @@ namespace {
 
 TEST(MovesTest, CalculateLegalMovesWhitePawns) {
   Position p = Position::FromFen("8/3p4/8/6Pp/8/1p2K2p/P3P2P/8 w - h6 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a2"], testing::UnorderedElementsAre("a3", "a4", "b3"));
   EXPECT_THAT(json["e2"], testing::IsEmpty());
@@ -23,7 +23,7 @@ TEST(MovesTest, CalculateLegalMovesWhitePawns) {
 
 TEST(MovesTest, CalculateLegalMovesBlackPawns) {
   Position p = Position::FromFen("8/3p4/8/8/Pp6/2P5/P7/8 b - a3 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["d7"], testing::UnorderedElementsAre("d6", "d5"));
   EXPECT_THAT(json["b4"], testing::UnorderedElementsAre("a3", "b3", "c3"));
@@ -31,7 +31,7 @@ TEST(MovesTest, CalculateLegalMovesBlackPawns) {
 
 TEST(MovesTest, CalculateLegalMovesKnight) {
   Position p = Position::FromFen("7N/8/3P1P2/2P3P1/4N3/N7/8/8 w - - 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a3"],
               testing::UnorderedElementsAre("b1", "c2", "c4", "b5"));
@@ -42,7 +42,7 @@ TEST(MovesTest, CalculateLegalMovesKnight) {
 
 TEST(MovesTest, CalculateLegalMovesRook) {
   Position p = Position::FromFen("4Q2R/8/p3RP1p/8/p7/8/8/R3R3 w - - 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a1"], testing::UnorderedElementsAre("a2", "a3", "a4", "b1",
                                                         "c1", "d1"));
@@ -59,7 +59,7 @@ TEST(MovesTest, CalculateLegalMovesRook) {
 TEST(MovesTest, CalculateLegalMovesWhiteKing) {
   Position p = Position::FromFen(
       "1n1K3K/2p1PPP1/4PKP1/4PPP1/pn6/Kn6/nn6/R3K2R w - - 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a3"], testing::UnorderedElementsAre("b2"));
   EXPECT_THAT(json["e1"], testing::UnorderedElementsAre("e2", "f2", "f1"));
@@ -68,49 +68,49 @@ TEST(MovesTest, CalculateLegalMovesWhiteKing) {
   EXPECT_THAT(json["h8"], testing::UnorderedElementsAre("h7", "g8"));
 
   // Check castling positions.
-  EXPECT_THAT(legalMovesJson(Position::FromFen(
-                  "8/8/8/8/8/8/1Q1N1NP1/R3K2R w KQ - 0 1"))["e1"],
+  EXPECT_THAT(LegalMoves(Position::FromFen(
+                  "8/8/8/8/8/8/1Q1N1NP1/R3K2R w KQ - 0 1")).ToJson()["e1"],
               testing::UnorderedElementsAre("e2", "d1", "f1", "c1", "g1"));
-  EXPECT_THAT(legalMovesJson(Position::FromFen(
-                  "8/8/8/8/8/8/1Q1N1NP1/RN2K1NR w KQ - 0 1"))["e1"],
+  EXPECT_THAT(LegalMoves(Position::FromFen(
+                  "8/8/8/8/8/8/1Q1N1NP1/RN2K1NR w KQ - 0 1")).ToJson()["e1"],
               testing::UnorderedElementsAre("e2", "d1", "f1"));
   EXPECT_THAT(
-      legalMovesJson(Position::FromFen(
-          "rn1qkbnr/ppp2ppp/8/1b6/8/8/PPPP1PPP/RNBQK2R w KQkq - 3 4"))["e1"],
+      LegalMoves(Position::FromFen(
+          "rn1qkbnr/ppp2ppp/8/1b6/8/8/PPPP1PPP/RNBQK2R w KQkq - 3 4")).ToJson()["e1"],
       testing::IsEmpty());
   EXPECT_THAT(
-      legalMovesJson(Position::FromFen(
-          "rnbqk1nr/ppp2ppp/8/8/1b6/8/PPP1PPPP/RNBQK2R w KQkq - 3 4"))["e1"],
+      LegalMoves(Position::FromFen(
+          "rnbqk1nr/ppp2ppp/8/8/1b6/8/PPP1PPPP/RNBQK2R w KQkq - 3 4")).ToJson()["e1"],
       testing::UnorderedElementsAre("f1"));
 }
 
 TEST(MovesTest, CalculateLegalMovesBlackKing) {
-  EXPECT_THAT(legalMovesJson(Position::FromFen(
-                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b - - 0 1"))["e8"],
+  EXPECT_THAT(LegalMoves(Position::FromFen(
+                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b - - 0 1")).ToJson()["e8"],
               testing::UnorderedElementsAre("e7", "d8", "f8"));
 
   // Check castling positions.
-  EXPECT_THAT(legalMovesJson(Position::FromFen(
-                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b kq - 0 1"))["e8"],
+  EXPECT_THAT(LegalMoves(Position::FromFen(
+                  "r3k2r/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b kq - 0 1")).ToJson()["e8"],
               testing::UnorderedElementsAre("e7", "d8", "f8", "c8", "g8"));
   EXPECT_THAT(
-      legalMovesJson(Position::FromFen(
-          "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1"))["e8"],
+      LegalMoves(Position::FromFen(
+          "r2nk1nr/2qn1n2/8/8/8/8/1Q1N1NP1/RN2K1NR b KQkq - 0 1")).ToJson()["e8"],
       testing::UnorderedElementsAre("e7", "f8"));
   EXPECT_THAT(
-      legalMovesJson(Position::FromFen(
-          "r3kbnr/pp2pppp/8/1B6/8/8/PPPP1PPP/RNBQK2R b KQkq - 0 1"))["e8"],
+      LegalMoves(Position::FromFen(
+          "r3kbnr/pp2pppp/8/1B6/8/8/PPPP1PPP/RNBQK2R b KQkq - 0 1")).ToJson()["e8"],
       testing::UnorderedElementsAre("d8"));
   EXPECT_THAT(
-      legalMovesJson(Position::FromFen(
-          "r3kbnr/pppp1ppp/8/6B1/8/8/PPP1PPPP/RN1QKB1R b KQkq - 0 1"))["e8"],
+      LegalMoves(Position::FromFen(
+          "r3kbnr/pppp1ppp/8/6B1/8/8/PPP1PPPP/RN1QKB1R b KQkq - 0 1")).ToJson()["e8"],
       testing::IsEmpty());
 }
 
 TEST(MovesTest, CalculateLegalMovesBishop) {
   Position p =
       Position::FromFen("1B4B1/2r4n/3n4/4B3/2B5/1R4R1/4n3/B6B w - - 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a1"], testing::UnorderedElementsAre("b2", "c3", "d4"));
   EXPECT_THAT(json["h1"], testing::UnorderedElementsAre("g2", "f3", "e4", "d5",
@@ -127,7 +127,7 @@ TEST(MovesTest, CalculateLegalMovesBishop) {
 TEST(MovesTest, CalculateLegalMovesQueen) {
   Position p =
       Position::FromFen("Qr1RRR1Q/r2RQR2/3RrR2/8/4R3/2rQ4/8/Q1R2Q2 w - - 0 1");
-  nlohmann::json json = legalMovesJson(p);
+  nlohmann::json json = LegalMoves(p).ToJson();
 
   EXPECT_THAT(json["a1"],
               testing::UnorderedElementsAre("b2", "c3", "b1", "a2", "a3", "a4",
@@ -245,39 +245,45 @@ TEST(MovesTest, IsActiveColorInCheck) {
 }
 
 TEST(MovesTest, ControlSquaresBasic) {
-  Position p = Position::FromFen("7r/8/8/8/8/8/8/2R5 w - - 0 1");
-  std::map<Square, std::pair<int, int>> control_squares = controlSquares(p);
-  EXPECT_EQ(control_squares[Square(0)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(1)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares.count(Square(2)), 0);
-  EXPECT_EQ(control_squares[Square(3)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(7)], std::make_pair(5, 1));
-  EXPECT_EQ(control_squares[Square(10)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(18)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(58)], std::make_pair(5, 1));
-  EXPECT_EQ(control_squares[Square(59)], std::make_pair(-10, -10));
-  EXPECT_EQ(control_squares[Square(62)], std::make_pair(-10, -10));
-  EXPECT_EQ(control_squares.count(Square(63)), 0);
+  ControlSquares control_squares(
+      Position::FromFen("7r/8/8/8/8/8/8/2R5 w - - 0 1"));
+  EXPECT_EQ(control_squares.ToJson()["a1"], 10);
+  EXPECT_EQ(control_squares.ToJson()["b1"], 10);
+  EXPECT_EQ(control_squares.ToJson().count("c1"), 0);
+  EXPECT_EQ(control_squares.ToJson()["d1"], 10);
+  EXPECT_EQ(control_squares.ToJson()["h1"], 5);
+  EXPECT_EQ(control_squares.ToJson()["c2"], 10);
+  EXPECT_EQ(control_squares.ToJson()["c3"], 10);
+  EXPECT_EQ(control_squares.ToJson()["c8"], 5);
+  EXPECT_EQ(control_squares.ToJson()["d8"], -10);
+  EXPECT_EQ(control_squares.ToJson()["g8"], -10);
+  EXPECT_EQ(control_squares.ToJson().count("h8"), 0);
+  EXPECT_TRUE(control_squares.IsSafeToMove(WROOK, Square("a1")));
+  EXPECT_TRUE(control_squares.IsSafeToMove(WROOK, Square("b1")));
+  EXPECT_TRUE(control_squares.IsSafeToMove(WROOK, Square("d1")));
+  EXPECT_FALSE(control_squares.IsSafeToMove(WROOK, Square("h1")));
+  EXPECT_TRUE(control_squares.IsSafeToMove(WROOK, Square("c2")));
+  EXPECT_FALSE(control_squares.IsSafeToMove(WROOK, Square("c8")));
 }
 
 TEST(MovesTest, ControlSquaresDefendPieces) {
-  Position p = Position::FromFen("6r1/8/8/8/8/3P4/6P1/5B2 w - - 0 1");
-  std::map<Square, std::pair<int, int>> control_squares = controlSquares(p);
-  EXPECT_EQ(control_squares.count(Square(5)), 0);
-  EXPECT_EQ(control_squares.count(Square(6)), 0);
-  EXPECT_EQ(control_squares[Square(14)], std::make_pair(5, 1));
-  EXPECT_EQ(control_squares[Square(12)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(19)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares[Square(26)], std::make_pair(10, 10));
-  EXPECT_EQ(control_squares.count(Square(33)), 0);
+  ControlSquares control_squares(
+      Position::FromFen("6r1/8/8/8/8/3P4/6P1/5B2 w - - 0 1"));
+  EXPECT_EQ(control_squares.ToJson().count("f1"), 0);
+  EXPECT_EQ(control_squares.ToJson().count("g1"), 0);
+  EXPECT_EQ(control_squares.ToJson()["g2"], 5);
+  EXPECT_EQ(control_squares.ToJson()["e2"], 10);
+  EXPECT_EQ(control_squares.ToJson()["d3"], 10);
+  EXPECT_EQ(control_squares.ToJson()["c4"], 10);
+  EXPECT_EQ(control_squares.ToJson().count("b5"), 0);
 }
 
 TEST(MovesTest, ControlSquaresPawnAttackers) {
-  Position p = Position::FromFen("8/8/7p/1nb5/8/4BN2/1P6/8 w - - 0 1");
-  std::map<Square, std::pair<int, int>> control_squares = controlSquares(p);
-  EXPECT_EQ(control_squares[Square(16)], std::make_pair(1, -1));
-  EXPECT_EQ(control_squares[Square(18)], std::make_pair(3, -1));
-  EXPECT_EQ(control_squares[Square(38)], std::make_pair(1, 1));
+  ControlSquares control_squares(
+      Position::FromFen("8/8/7p/1nb5/8/4BN2/1P6/8 w - - 0 1"));
+  EXPECT_EQ(control_squares.ToJson()["a3"], 1);
+  EXPECT_EQ(control_squares.ToJson()["c3"], 3);
+  EXPECT_EQ(control_squares.ToJson()["g5"], 1);
 }
 
 }  // namespace
