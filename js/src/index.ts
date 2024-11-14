@@ -24,6 +24,8 @@ interface GameState {
 
 const queryParams = new URLSearchParams(window.location.search);
 const showControl = queryParams.has('control');
+const flip = queryParams.has('flip');
+const engine = flip ? 'w' : 'b';
 
 let state: GameState = {
   fen: queryParams.get('fen') || startpos,
@@ -72,9 +74,9 @@ board.addEventListener('drag-start', (e: Event) => {
     return;
   }
 
-  // only pick up pieces for the white side when it is their turn to move
+  // only pick up pieces when it is their turn to move
   if ((state.turn === 'w' && piece.search(/^b/) !== -1) ||
-    (state.turn === 'b')) {
+    (state.turn === 'b' && piece.search(/^w/) !== -1)) {
     e.preventDefault();
     return;
   }
@@ -122,8 +124,10 @@ board.addEventListener('drop', async (e: Event) => {
     return;
   }
 
-  if (state.turn === 'b' && !state.in_checkmate && !state.in_draw) {
-    // Make a move for black from the engine.
+  console.log('XXXXXXXXXXXXXX');
+  console.log(state);
+  if (state.turn == engine && !state.in_checkmate && !state.in_draw) {
+    // Make a move from the engine.
     nextMove();
   }
 });
@@ -180,8 +184,15 @@ async function initializeBoard() {
     console.log(e);
   }
 
-  if (state.turn === 'b' && !state.in_checkmate && !state.in_draw) {
-    // Make a move for black from the engine.
+  if (board && flip) {
+    board.orientation = 'black';
+  }
+
+  console.log('YYYYYYYYYYYYYYYY');
+  console.log(state);
+
+  if (state.turn == engine && !state.in_checkmate && !state.in_draw) {
+    // Make a move from the engine.
     nextMove();
   }
 }
