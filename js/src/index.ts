@@ -45,9 +45,37 @@ const highlightStyles = document.createElement('style');
 document.head.append(highlightStyles);
 const whiteSquareGrey = '#a9a9a9';
 const blackSquareGrey = '#696969';
+const lastMoveYellow = 'rgba(255, 255, 51, 0.5)';
+const inCheckRed = '#f25c61';
+
+function initialHighlightStyles() {
+  let initial = '';
+  if (state.last_move) {
+    let startingSquare = state.last_move.substring(0, 2);
+    let endingSquare = state.last_move.substring(2, 4);
+    initial += `
+      chess-board::part(${startingSquare}) {
+        background-color: ${lastMoveYellow};
+      }
+      chess-board::part(${endingSquare}) {
+        background-color: ${lastMoveYellow};
+      }
+    `;
+  }
+  if (state.in_check && board?.position) {
+    let piece = state.turn + 'K';
+    let square = Object.keys(board.position).find(square => board.position[square] === piece);
+    initial += `
+      chess-board::part(${square}) {
+        background-color: ${inCheckRed};
+      }
+    `;
+  }
+  return initial;
+}
 
 function removeGreySquares() {
-  highlightStyles.textContent = '';
+  highlightStyles.textContent = initialHighlightStyles();
 }
 
 function greySquare(square: string) {
@@ -124,8 +152,6 @@ board.addEventListener('drop', async (e: Event) => {
     return;
   }
 
-  console.log('XXXXXXXXXXXXXX');
-  console.log(state);
   if (state.turn == engine && !state.in_checkmate && !state.in_draw) {
     // Make a move from the engine.
     nextMove();
@@ -188,9 +214,6 @@ async function initializeBoard() {
     board.orientation = 'black';
   }
 
-  console.log('YYYYYYYYYYYYYYYY');
-  console.log(state);
-
   if (state.turn == engine && !state.in_checkmate && !state.in_draw) {
     // Make a move from the engine.
     nextMove();
@@ -218,6 +241,7 @@ function updateState(newState: GameState) {
   state = newState;
   board!.setPosition(state.fen, false);
 
+  highlightStyles.textContent = initialHighlightStyles();
   controlStyles.textContent = '';
   if (showControl) {
     for (const [square, control] of Object.entries(state.control)) {
