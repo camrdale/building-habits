@@ -31,7 +31,7 @@ TEST(PositionTest, ParsePromotion) {
   EXPECT_EQ(parsePromotion('q'), QUEEN);
   EXPECT_EQ(parsePromotion('n'), KNIGHT);
   EXPECT_EQ(parsePromotion('N'), KNIGHT);
-  EXPECT_EQ(parsePromotion('?'), QUEEN);
+  EXPECT_EQ(parsePromotion('?'), PAWN);
 }
 
 TEST(PositionTest, FromFenStartPos) {

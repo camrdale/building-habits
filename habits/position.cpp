@@ -25,10 +25,13 @@ std::string Square::Algebraic() const {
 Piece parsePromotion(char promotion) {
   int piece = FEN_PIECES.find(std::toupper(promotion));
   if (piece == std::string_view::npos) {
-    // Promote to queen by default.
-    return QUEEN;
+    return PAWN;
   }
   return static_cast<Piece>(piece);
+}
+
+char toPromotion(Piece piece) {
+  return std::tolower(FEN_PIECES[piece]);
 }
 
 bool Position::IsDraw() const {

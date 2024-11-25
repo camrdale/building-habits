@@ -115,6 +115,8 @@ struct Square {
 
 // Parse a promotion character from UCI move notation.
 Piece parsePromotion(char promotion);
+// Convert a piece to a promotion character in UCI move notation.
+char toPromotion(Piece piece);
 
 struct Position {
   // Boards representing the current positions of all pieces of each

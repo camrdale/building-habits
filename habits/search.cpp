@@ -90,7 +90,7 @@ std::string Game::bestMove(const Position& p) {
   // 1. Don't hang free pieces.
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
     if (control_squares.IsPieceAttacked(piece_and_square)) {
-      Square best_take = control_squares.BestTake(piece_and_square.piece, move_squares);
+      PieceMove best_take = control_squares.BestTake(piece_and_square.piece, move_squares);
       if (best_take.IsSet()) {
         std::cout << "Moving attacked piece " << piece_and_square.piece
                   << " from " << piece_and_square.square
@@ -100,7 +100,7 @@ std::string Game::bestMove(const Position& p) {
                best_take.Algebraic();
       }
 
-      Square max_control_square = control_squares.SafestMove(piece_and_square.piece, move_squares);
+      PieceMove max_control_square = control_squares.SafestMove(piece_and_square.piece, move_squares);
       if (max_control_square.IsSet()) {
         std::cout << "Moving attacked piece " << piece_and_square.piece
                   << " from " << piece_and_square.square << " to safest square "
@@ -109,7 +109,7 @@ std::string Game::bestMove(const Position& p) {
                max_control_square.Algebraic();
       }
 
-      Square best_sack = control_squares.BestSack(piece_and_square.piece, move_squares);
+      PieceMove best_sack = control_squares.BestSack(piece_and_square.piece, move_squares);
       if (best_sack.IsSet()) {
         std::cout << "Sacking attacked piece " << piece_and_square.piece
                   << " from " << piece_and_square.square
@@ -126,7 +126,7 @@ std::string Game::bestMove(const Position& p) {
   // Reverse sort so we attack with the lowest value pieces first.
   std::reverse(sorted_legal_moves.begin(), sorted_legal_moves.end());
   for (const auto& [piece_and_square, move_squares] : sorted_legal_moves) {
-    Square first_hanging = control_squares.FirstHanging(piece_and_square.piece, move_squares);
+    PieceMove first_hanging = control_squares.FirstHanging(piece_and_square.piece, move_squares);
     if (first_hanging.IsSet()) {
       std::cout << "Taking free piece with " << piece_and_square.piece
                 << " from " << piece_and_square.square << " to "

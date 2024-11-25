@@ -21,6 +21,17 @@ struct PieceOnSquare {
       piece(piece),
       square(algebraic_square) {}
 
+  // Returns true if the piece is a pawn in a position to promote.
+  bool CanPromote() const {
+    if (piece == WPAWN && square.Rank() == 7) {
+      return true;
+    }
+    if (piece == BPAWN && square.Rank() == 2) {
+      return true;
+    }
+    return false;
+  }
+
   // Custom comparison operator for std::map.
   bool operator<(const PieceOnSquare& other) const {
       if (piece != other.piece) {
@@ -36,12 +47,44 @@ struct PieceOnSquare {
   }
 };
 
+// A destination square for a piece move, with an optional piece to promote to.
+struct PieceMove {
+  Square square;
+  // Optional promotion piece, will be PAWN if there is no promotion.
+  Piece promote_to;
+
+  PieceMove() : square(Square()), promote_to(PAWN) {}
+  PieceMove(const Square& square) : square(square), promote_to(PAWN) {}
+  PieceMove(const Square& square, Piece promote_to) : square(square), promote_to(promote_to) {}
+
+  // Whether the Square has been initialized.
+  bool IsSet() const {
+    return square.IsSet();
+  }
+
+  bool operator==(const PieceMove& other) const {
+    return square == other.square && promote_to == other.promote_to;
+  }
+
+  std::string Algebraic() const {
+    std::string algebraic = square.Algebraic();
+    if (promote_to != PAWN) {
+      algebraic += toPromotion(promote_to);
+    }
+    return algebraic;
+  }
+  
+  friend std::ostream& operator<<(std::ostream& stream, const PieceMove& move) {
+    return stream << move.Algebraic();
+  }
+};
+
 // Representation for a piece on a square, and all the moves it can make from there.
 struct PieceMoves {
   PieceOnSquare piece_on_square;
-  std::vector<Square> moves;
+  std::vector<PieceMove> moves;
 
-  PieceMoves(const PieceOnSquare& piece_on_square, const std::vector<Square>& moves) :
+  PieceMoves(const PieceOnSquare& piece_on_square, const std::vector<PieceMove>& moves) :
       piece_on_square(piece_on_square), moves(moves) {}
 };
 
@@ -71,7 +114,7 @@ class LegalMoves {
   Color active_color_;
   // A map of the pieces on their squares, to the squares the piece can
   // legally move to.
-  std::map<PieceOnSquare, std::vector<Square>> legal_moves_;
+  std::map<PieceOnSquare, std::vector<PieceMove>> legal_moves_;
 };
 
 // Applies the move in UCI form (2-character algebraic notation for the source
@@ -108,22 +151,22 @@ class ControlSquares {
 
   // Find the safest move for a piece from a list of legal moves. Returns an
   // unset Square if there are no safe moves for the piece.
-  Square SafestMove(ColoredPiece piece, const std::vector<Square>& moves) const;
+  PieceMove SafestMove(ColoredPiece piece, const std::vector<PieceMove>& moves) const;
 
   // Find the best take of an opponent's piece from a list of legal moves.
   // Returns an unset Square if there are no safe takes for the piece.
-  Square BestTake(ColoredPiece piece, const std::vector<Square>& moves) const;
+  PieceMove BestTake(ColoredPiece piece, const std::vector<PieceMove>& moves) const;
 
   // Find the best way to sack a piece for an opponent's piece.
   // Returns an unset Square if there are no available sacks for the piece.
-  Square BestSack(ColoredPiece piece, const std::vector<Square>& moves) const;
+  PieceMove BestSack(ColoredPiece piece, const std::vector<PieceMove>& moves) const;
 
   // Find the first hanging opponent's piece from a list of legal moves.
   // Returns an unset Square if there are no hanging opponent pieces.
-  Square FirstHanging(ColoredPiece piece, const std::vector<Square>& moves) const;
+  PieceMove FirstHanging(ColoredPiece piece, const std::vector<PieceMove>& moves) const;
 
   // Find all the trades available for the given piece from a list of legal moves.
-  PieceMoves Trades(const PieceOnSquare& piece_on_square, const std::vector<Square>& moves) const;
+  PieceMoves Trades(const PieceOnSquare& piece_on_square, const std::vector<PieceMove>& moves) const;
 
   // Convert the control of the squares on the board to JSON format.
   // The keys are the squares of the board (squares that no piece can attack

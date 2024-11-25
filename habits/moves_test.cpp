@@ -1,5 +1,9 @@
 #include "moves.hpp"
 
+#include <map>
+#include <set>
+#include <fstream>
+#include <filesystem>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -284,6 +288,38 @@ TEST(MovesTest, ControlSquaresPawnAttackers) {
   EXPECT_EQ(control_squares.ToJson()["a3"], 1);
   EXPECT_EQ(control_squares.ToJson()["c3"], 3);
   EXPECT_EQ(control_squares.ToJson()["g5"], 1);
+}
+
+// Test suite from https://github.com/schnitzi/rampart
+TEST(MovesTest, TestSuite) {
+  for (const std::filesystem::directory_entry& file : std::filesystem::directory_iterator("./testdata")) {
+    std::filesystem::path path = file.path();
+    if (path.extension() == ".json") {
+      std::ifstream f(path);
+      nlohmann::json testcases = nlohmann::json::parse(f);
+      for (nlohmann::json testcase : testcases["testCases"]) {
+        std::set<std::string> expected_end_positions_set;
+        for (nlohmann::json expected : testcase["expected"]) {
+          expected_end_positions_set.emplace(expected["fen"]);
+        }
+
+        std::set<std::string> end_positions_set;
+        Position start = Position::FromFen(testcase["start"]["fen"].template get<std::string>());
+        nlohmann::json json = LegalMoves(start).ToJson();
+        for (const auto& [starting_square, ending_squares] : json.items()) {
+          for (const std::string& ending_square : ending_squares) {
+            Position end = start.Duplicate();
+            move(&end, starting_square + ending_square);
+            end_positions_set.emplace(end.ToFen());
+          }
+        }
+
+        EXPECT_THAT(end_positions_set, testing::ContainerEq(expected_end_positions_set))
+            << path.filename() << ": " << testcases["description"] 
+            << " failed for starting position: " << testcase["start"]["description"];
+      }
+    }
+  }
 }
 
 }  // namespace
